@@ -1,0 +1,187 @@
+<script setup lang="ts">
+import type { DrawingDocument } from '~/types/stroke'
+import { createEmptyDocument } from '~/utils/canvas/strokes'
+import type { PlayPayload } from '~/types/chain'
+
+const route = useRoute()
+const api = useChainApi()
+
+const slug = computed(() => String(route.params.chainId || ''))
+const token = computed(() => String(route.query.token || ''))
+
+const payload = ref<PlayPayload | null>(null)
+const loadError = ref('')
+const busy = ref(false)
+const submitError = ref('')
+const nickname = ref('')
+const guess = ref('')
+const drawing = ref<DrawingDocument>(createEmptyDocument())
+
+useHead({
+  title: computed(() => `Play — ${slug.value || 'PenPass'}`),
+})
+
+async function load() {
+  loadError.value = ''
+  payload.value = null
+  if (!slug.value || !token.value) {
+    loadError.value = 'Missing chain link or token.'
+    return
+  }
+  try {
+    const data = await api.getPlayPayload(slug.value, token.value)
+    if (data.status === 'complete') {
+      await navigateTo(`/c/${slug.value}/reveal`)
+      return
+    }
+    payload.value = data
+    drawing.value = createEmptyDocument()
+    guess.value = ''
+  }
+  catch (e) {
+    loadError.value = e instanceof Error ? e.message : 'Could not load step'
+  }
+}
+
+async function submit() {
+  submitError.value = ''
+  if (!payload.value || !token.value) return
+  if (!nickname.value.trim()) {
+    submitError.value = 'Add a nickname.'
+    return
+  }
+
+  if (payload.value.step_type === 'guess' && !guess.value.trim()) {
+    submitError.value = 'Enter a guess.'
+    return
+  }
+  if (payload.value.step_type === 'draw' && drawing.value.strokes.length === 0) {
+    submitError.value = 'Draw something first.'
+    return
+  }
+
+  busy.value = true
+  try {
+    const result = await api.submitStep({
+      slug: slug.value,
+      claimToken: token.value,
+      nickname: nickname.value.trim(),
+      guessText: payload.value.step_type === 'guess' ? guess.value.trim() : undefined,
+      strokeJson: payload.value.step_type === 'draw' ? drawing.value : undefined,
+    })
+
+    if (result.status === 'complete') {
+      await navigateTo(`/c/${slug.value}/reveal`)
+      return
+    }
+
+    await navigateTo({
+      path: `/c/${slug.value}/pass`,
+      query: {
+        token: result.claim_token || '',
+        step: String(result.next_step || ''),
+        you: nickname.value.trim(),
+      },
+    })
+  }
+  catch (e) {
+    submitError.value = e instanceof Error ? e.message : 'Submit failed'
+  }
+  finally {
+    busy.value = false
+  }
+}
+
+onMounted(load)
+</script>
+
+<template>
+  <main class="min-h-dvh bg-gradient-to-b from-slate-100 to-slate-200 px-4 py-8 text-slate-900">
+    <div class="mx-auto flex max-w-lg flex-col gap-6">
+      <header class="space-y-1">
+        <h1 class="text-2xl font-bold tracking-tight">
+          Your turn
+        </h1>
+        <p
+          v-if="payload"
+          class="text-sm text-slate-600"
+        >
+          Step {{ payload.step_number }} of {{ payload.max_steps }}
+          · {{ payload.step_type === 'guess' ? 'Guess the drawing' : 'Draw the prompt' }}
+        </p>
+      </header>
+
+      <p
+        v-if="loadError"
+        class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+      >
+        {{ loadError }}
+      </p>
+
+      <template v-else-if="payload">
+        <label class="block space-y-2">
+          <span class="text-sm font-medium text-slate-700">Your nickname</span>
+          <input
+            v-model="nickname"
+            type="text"
+            maxlength="32"
+            class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          >
+        </label>
+
+        <div
+          v-if="payload.step_type === 'guess' && payload.prior_stroke_json"
+          class="space-y-2"
+        >
+          <h2 class="text-sm font-medium text-slate-700">
+            What is this?
+          </h2>
+          <CanvasStrokeRenderer :document="payload.prior_stroke_json" />
+          <input
+            v-model="guess"
+            type="text"
+            maxlength="120"
+            class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            placeholder="Your guess"
+          >
+        </div>
+
+        <div
+          v-else-if="payload.step_type === 'draw'"
+          class="space-y-2"
+        >
+          <h2 class="text-sm font-medium text-slate-700">
+            Draw this
+          </h2>
+          <p class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-base font-medium">
+            {{ payload.prior_guess_text }}
+          </p>
+          <CanvasDrawingCanvas v-model="drawing" />
+        </div>
+
+        <p
+          v-if="submitError"
+          class="text-sm text-red-600"
+        >
+          {{ submitError }}
+        </p>
+
+        <button
+          type="button"
+          class="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+          :disabled="busy"
+          @click="submit"
+        >
+          {{ busy ? 'Submitting…' : 'Submit & continue' }}
+        </button>
+      </template>
+
+      <p
+        v-else
+        class="text-sm text-slate-500"
+      >
+        Loading…
+      </p>
+    </div>
+  </main>
+</template>

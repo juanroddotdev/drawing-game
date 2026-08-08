@@ -16,7 +16,13 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` for the Phase 1 canvas lab (draw → export JSON → re-render).
+Open `http://localhost:3000` — start a chain at `/play/new`, or use `/lab` for the canvas-only playground.
+
+### Supabase (Phase 2)
+
+1. Copy `.env.example` → `.env` and set project URL + publishable key.
+2. Apply the migration in `supabase/migrations/` (SQL editor, or `supabase db push` after `supabase link`).
+3. Confirm RPCs `create_chain`, `get_play_payload`, `submit_step`, `get_reveal` exist.
 
 ## Scripts
 

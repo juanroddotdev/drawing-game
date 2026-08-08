@@ -33,7 +33,7 @@ function reRenderFromJson() {
 
 <template>
   <main class="min-h-dvh bg-gradient-to-b from-slate-100 to-slate-200 px-4 py-8 text-slate-900">
-    <div class="mx-auto flex max-w-5xl flex-col gap-8">
+    <div class="mx-auto flex max-w-lg flex-col gap-8 lg:max-w-5xl">
       <header class="space-y-2">
         <NuxtLink
           to="/"
@@ -48,7 +48,7 @@ function reRenderFromJson() {
           DoodleLoop canvas lab
         </h1>
         <p class="max-w-2xl text-slate-600">
-          Draw with vector strokes, export JSON, and re-render. No accounts or chains.
+          Same drawing shell as play — vector strokes, export JSON, re-render. No accounts or chains.
         </p>
       </header>
 

@@ -1,11 +1,11 @@
 import type { BrushTool, DrawingDocument } from '~/types/stroke'
-import { BRUSH_COLORS, BRUSH_WIDTHS } from '~/types/stroke'
+import { BRUSH_COLORS, BRUSH_WIDTH_DEFAULT } from '~/types/stroke'
 import { cloneDocument, createEmptyDocument, undoStroke } from '~/utils/canvas/strokes'
 
 export function useDrawingSession(initial?: DrawingDocument) {
   const document = ref<DrawingDocument>(initial ? cloneDocument(initial) : createEmptyDocument())
   const color = ref<string>(BRUSH_COLORS[0])
-  const width = ref<number>(BRUSH_WIDTHS[1])
+  const width = ref<number>(BRUSH_WIDTH_DEFAULT)
   const tool = ref<BrushTool>('pen')
   const startedAt = ref<number | null>(null)
 
@@ -60,7 +60,6 @@ export function useDrawingSession(initial?: DrawingDocument) {
     const last = strokes[strokes.length - 1]
     const points = last.points
     const prev = points[points.length - 1]
-    // Skip near-duplicate samples to keep JSON lean
     const dx = x - prev.x
     const dy = y - prev.y
     if (dx * dx + dy * dy < 0.00000025) return
@@ -83,7 +82,6 @@ export function useDrawingSession(initial?: DrawingDocument) {
     canUndo,
     strokeCount,
     colors: BRUSH_COLORS,
-    widths: BRUSH_WIDTHS,
     setDocument,
     clear,
     undo,

@@ -11,6 +11,20 @@ const prompt = ref('')
 const drawing = ref<DrawingDocument>(createEmptyDocument())
 const busy = ref(false)
 const error = ref('')
+const sheetOpen = ref(false)
+
+function openSubmit() {
+  error.value = ''
+  if (!prompt.value.trim()) {
+    error.value = 'Add a prompt.'
+    return
+  }
+  if (drawing.value.strokes.length === 0) {
+    error.value = 'Draw something first.'
+    return
+  }
+  sheetOpen.value = true
+}
 
 async function startChain() {
   error.value = ''
@@ -36,6 +50,7 @@ async function startChain() {
       strokeJson: drawing.value,
       email: email.value.trim() || undefined,
     })
+    sheetOpen.value = false
     await navigateTo({
       path: `/c/${result.slug}/pass`,
       query: {
@@ -55,71 +70,55 @@ async function startChain() {
 </script>
 
 <template>
-  <main class="min-h-dvh bg-gradient-to-b from-slate-100 to-slate-200 px-4 py-8 text-slate-900">
-    <div class="mx-auto flex max-w-lg flex-col gap-6">
-      <header class="space-y-1">
+  <main class="flex min-h-dvh flex-col bg-gradient-to-b from-slate-100 to-slate-200 text-slate-900">
+    <div class="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pt-4">
+      <header class="mb-3 flex items-center justify-between gap-2">
         <NuxtLink
           to="/"
           class="text-sm font-medium text-slate-500 hover:text-slate-800"
         >
           ← Home
         </NuxtLink>
-        <h1 class="text-2xl font-bold tracking-tight">
-          Start a loop
-        </h1>
-        <p class="text-sm text-slate-600">
-          Draw the prompt, then pass a link to a friend to guess.
-        </p>
+        <span class="text-sm font-semibold text-slate-700">Start a loop</span>
       </header>
 
-      <UiPhoneTip />
+      <UiPhoneTip class="mb-3" />
 
-      <label class="block space-y-2">
-        <span class="text-sm font-medium text-slate-700">Your nickname</span>
-        <input
-          v-model="nickname"
-          type="text"
-          maxlength="32"
-          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-          placeholder="Alex"
-        >
-      </label>
+      <div class="mb-3">
+        <ChainPromptBuilder v-model="prompt" />
+      </div>
 
-      <label class="block space-y-2">
-        <span class="text-sm font-medium text-slate-700">Email <span class="font-normal text-slate-500">(optional — for finish notice later)</span></span>
-        <input
-          v-model="email"
-          type="email"
-          autocomplete="email"
-          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-          placeholder="you@example.com"
-        >
-      </label>
-
-      <ChainPromptBuilder v-model="prompt" />
-
-      <div class="space-y-2">
-        <h2 class="text-sm font-medium text-slate-700">
-          Your drawing
-        </h2>
+      <div class="min-h-0 flex-1">
         <CanvasDrawingCanvas v-model="drawing" />
       </div>
 
       <p
         v-if="error"
-        class="text-sm text-red-600"
+        class="mt-2 text-sm text-red-600"
       >
         {{ error }}
       </p>
+    </div>
 
+    <div class="mx-auto w-full max-w-lg px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
       <button
         type="button"
-        class="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+        class="w-full rounded-2xl bg-slate-900 px-4 py-4 text-base font-semibold text-white disabled:opacity-50"
         :disabled="busy"
-        @click="startChain"
+        @click="openSubmit"
       >
-        {{ busy ? 'Creating…' : 'Create & get share link' }}
+        Done
       </button>
     </div>
+
+    <UiPlayerSubmitSheet
+      v-model:open="sheetOpen"
+      v-model:nickname="nickname"
+      v-model:email="email"
+      title="Submit your drawing"
+      confirm-label="Create & share"
+      :busy="busy"
+      @confirm="startChain"
+    />
   </main>
 </template>

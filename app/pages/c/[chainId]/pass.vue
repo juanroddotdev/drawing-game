@@ -20,14 +20,14 @@ useHead({ title: 'Pass the link — DoodleLoop' })
 
 <template>
   <main class="min-h-dvh bg-gradient-to-b from-slate-100 to-slate-200 px-4 py-8 text-slate-900">
-    <div class="mx-auto flex max-w-lg flex-col gap-6">
+    <div class="mx-auto flex max-w-lg flex-col gap-5">
       <header class="space-y-1">
-        <h1 class="text-2xl font-bold tracking-tight">
+        <h1 class="text-xl font-bold tracking-tight">
           Pass it on
         </h1>
         <p class="text-sm text-slate-600">
           <span v-if="you">Nice, {{ you }}. </span>
-          Send this link so someone can play {{ stepLabel }}.
+          Share so someone can play {{ stepLabel }}.
         </p>
       </header>
 
@@ -43,7 +43,7 @@ useHead({ title: 'Pass the link — DoodleLoop' })
 
       <div
         v-if="showDevTools"
-        class="flex flex-wrap gap-2 border-t border-slate-300/70 pt-4"
+        class="flex flex-wrap gap-2 rounded-xl border border-dashed border-slate-400/80 bg-white/50 p-3"
       >
         <NuxtLink
           v-if="token"

@@ -29,10 +29,17 @@ export const BRUSH_COLORS = [
   '#16a34a',
   '#ca8a04',
   '#db2777',
+  '#7c3aed',
   '#ffffff',
 ] as const
 
-/** Brush sizes as fractions of canvas width. */
+/** Continuous brush size range as fractions of canvas width. */
+export const BRUSH_WIDTH_MIN = 0.008
+export const BRUSH_WIDTH_MAX = 0.045
+/** Thicker default for legible telephone drawings. */
+export const BRUSH_WIDTH_DEFAULT = 0.02
+
+/** @deprecated Prefer continuous slider; kept for tests/compat. */
 export const BRUSH_WIDTHS = [0.008, 0.014, 0.024, 0.04] as const
 
 export type BrushTool = 'pen' | 'eraser'

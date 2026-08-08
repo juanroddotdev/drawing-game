@@ -4,15 +4,18 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss'],
   runtimeConfig: {
+    resendApiKey: '',
+    resendFromEmail: '',
     public: {
       supabaseUrl: '',
       supabaseAnonKey: '',
+      /** Only honored together with `import.meta.dev` for inspector UI. */
       devInspectorKey: '',
     },
   },
   app: {
     head: {
-      title: 'PenPass',
+      title: 'DoodleLoop',
       meta: [
         {
           name: 'viewport',
@@ -20,7 +23,7 @@ export default defineNuxtConfig({
         },
         {
           name: 'description',
-          content: 'PenPass — async friends drawing game (working title)',
+          content: 'DoodleLoop — async friends drawing & guessing game',
         },
       ],
     },

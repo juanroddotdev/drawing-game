@@ -21,7 +21,7 @@ const guess = ref('')
 const drawing = ref<DrawingDocument>(createEmptyDocument())
 
 useHead({
-  title: computed(() => `Play — ${slug.value || 'PenPass'}`),
+  title: computed(() => `Play — ${slug.value || 'DoodleLoop'}`),
 })
 
 async function load() {

@@ -1,10 +1,10 @@
-# Build Prompt — PenPass (working title)
+# Build Prompt — DoodleLoop
 
 Use this when kicking off implementation (or handing off to another agent). It reflects current product decisions in `base-idea-v3.md` and `open-questions.md`.
 
 ---
 
-Act as a senior full-stack engineer. We are building **PenPass** (working title): an asynchronous, web-first PWA — a friends-first Telestrations / telephone drawing-and-guessing game.
+Act as a senior full-stack engineer. We are building **DoodleLoop**: an asynchronous, web-first PWA — a friends-first Telestrations / telephone drawing-and-guessing game.
 
 Read the product decisions and MVP cut below. **Do not write application code yet.** First acknowledge the constraints, then propose a Nuxt-idiomatic folder/file structure and a short Phase 1 plan. Wait for confirmation before implementing Phase 1.
 
@@ -18,7 +18,7 @@ Read the product decisions and MVP cut below. **Do not write application code ye
 - **Stuck steps:** on timeout, seat frees; last completer can forward the link to anyone for the next step.
 - **Identity:** passwordless to play (nickname + **email**); optional account to save past games. SMS later, not V1.
 - **Drawing tools:** mid-weight — few colors, brush sizes, undo, maybe eraser (no layers).
-- **Name:** PenPass is a working title; keep it easy to rename (env, title, manifest).
+- **Name:** **DoodleLoop**
 
 ### Tech stack (locked)
 

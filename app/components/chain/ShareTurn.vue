@@ -25,7 +25,7 @@ const mailHref = computed(() => mailtoShare(props.url, props.stepLabel))
       <button
         type="button"
         class="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white"
-        @click="shareOrCopy({ title: 'PenPass — your turn', text: `You're up for ${stepLabel}`, url })"
+        @click="shareOrCopy({ title: 'DoodleLoop — your turn', text: `You're up for ${stepLabel}`, url })"
       >
         {{ canNativeShare ? 'Share' : 'Copy link' }}
       </button>

@@ -1,6 +1,6 @@
-# PenPass — Planned Architecture (V1)
+# DoodleLoop — Planned Architecture (V1)
 
-Working title: **PenPass**. Stack: **Nuxt (Vue 3) + Supabase + Tailwind**.  
+Product name: **DoodleLoop**. Stack: **Nuxt (Vue 3) + Supabase + Tailwind**.  
 Friends-first async drawing/guessing chains. This doc is the build blueprint for MVP.
 
 Related: [`base-idea-v3.md`](./base-idea-v3.md) · [`open-questions.md`](./open-questions.md) · [`build-prompt.md`](./build-prompt.md)

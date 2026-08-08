@@ -4,9 +4,13 @@ import type { ChainInspectorPayload } from '~/types/chain'
 const route = useRoute()
 const config = useRuntimeConfig()
 const api = useChainApi()
+const { enabled: showDevTools } = useDevTools()
 
 const slug = computed(() => String(route.params.chainId || ''))
-const enabled = computed(() => Boolean(config.public.devInspectorKey))
+
+if (!showDevTools.value) {
+  await navigateTo(`/c/${slug.value}`)
+}
 
 const data = ref<ChainInspectorPayload | null>(null)
 const error = ref('')
@@ -16,8 +20,8 @@ useHead({ title: computed(() => `Dev inspector — ${slug.value}`) })
 
 async function load() {
   error.value = ''
-  if (!enabled.value) {
-    error.value = 'Set NUXT_PUBLIC_DEV_INSPECTOR_KEY to enable the inspector.'
+  if (!showDevTools.value) {
+    error.value = 'Dev inspector is only available in local development.'
     return
   }
   try {

@@ -13,8 +13,9 @@ const absoluteUrl = computed(() => {
 })
 
 const stepLabel = computed(() => `step ${step.value || 'next'}`)
+const { enabled: showDevTools } = useDevTools()
 
-useHead({ title: 'Pass the link — PenPass' })
+useHead({ title: 'Pass the link — DoodleLoop' })
 </script>
 
 <template>
@@ -40,7 +41,10 @@ useHead({ title: 'Pass the link — PenPass' })
         Chain <span class="font-mono">{{ slug }}</span>
       </p>
 
-      <div class="flex flex-wrap gap-2 border-t border-slate-300/70 pt-4">
+      <div
+        v-if="showDevTools"
+        class="flex flex-wrap gap-2 border-t border-slate-300/70 pt-4"
+      >
         <NuxtLink
           v-if="token"
           :to="`/c/${slug}/play?token=${encodeURIComponent(token)}`"

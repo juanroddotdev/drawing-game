@@ -2,7 +2,7 @@
 import type { DrawingDocument } from '~/types/stroke'
 import { createEmptyDocument } from '~/utils/canvas/strokes'
 
-useHead({ title: 'Start a chain — PenPass' })
+useHead({ title: 'Start a loop — DoodleLoop' })
 
 const api = useChainApi()
 const { nickname, email, save } = usePlayerProfile()
@@ -65,12 +65,14 @@ async function startChain() {
           ← Home
         </NuxtLink>
         <h1 class="text-2xl font-bold tracking-tight">
-          Start a chain
+          Start a loop
         </h1>
         <p class="text-sm text-slate-600">
           Draw the prompt, then pass a link to a friend to guess.
         </p>
       </header>
+
+      <UiPhoneTip />
 
       <label class="block space-y-2">
         <span class="text-sm font-medium text-slate-700">Your nickname</span>

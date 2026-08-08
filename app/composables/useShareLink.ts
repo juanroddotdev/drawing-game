@@ -30,7 +30,7 @@ export function useShareLink() {
   }
 
   function mailtoShare(url: string, stepLabel: string) {
-    const subject = encodeURIComponent('Your turn on PenPass')
+    const subject = encodeURIComponent('Your turn on DoodleLoop')
     const body = encodeURIComponent(`You're up for ${stepLabel}.\n\n${url}\n`)
     return `mailto:?subject=${subject}&body=${body}`
   }

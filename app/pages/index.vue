@@ -1,5 +1,5 @@
 <script setup lang="ts">
-useHead({ title: 'PenPass' })
+useHead({ title: 'DoodleLoop' })
 </script>
 
 <template>
@@ -7,7 +7,7 @@ useHead({ title: 'PenPass' })
     <div class="mx-auto flex max-w-lg flex-col gap-8">
       <header class="space-y-3">
         <p class="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          PenPass
+          DoodleLoop
         </p>
         <h1 class="text-4xl font-bold tracking-tight">
           Draw. Pass. Guess. Repeat.
@@ -17,38 +17,22 @@ useHead({ title: 'PenPass' })
         </p>
       </header>
 
+      <UiPhoneTip />
+
       <div class="flex flex-wrap gap-3">
         <NuxtLink
           to="/play/new"
           class="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white"
         >
-          Start a chain
+          Start a loop
         </NuxtLink>
         <NuxtLink
-          to="/#lab"
+          to="/lab"
           class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold"
         >
           Canvas lab
         </NuxtLink>
       </div>
-
-      <section
-        id="lab"
-        class="space-y-3 border-t border-slate-300/70 pt-8"
-      >
-        <h2 class="text-lg font-semibold">
-          Phase 1 canvas lab
-        </h2>
-        <p class="text-sm text-slate-600">
-          Local draw → JSON export (no database).
-        </p>
-        <NuxtLink
-          to="/lab"
-          class="inline-flex text-sm font-semibold text-slate-900 underline"
-        >
-          Open canvas lab →
-        </NuxtLink>
-      </section>
     </div>
   </main>
 </template>

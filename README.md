@@ -1,4 +1,4 @@
-# PenPass (working title)
+# DoodleLoop
 
 Async friends-first Telestrations-style drawing game. Stack: **Nuxt + Supabase**.
 
@@ -12,22 +12,37 @@ Async friends-first Telestrations-style drawing game. Stack: **Nuxt + Supabase**
 ## Setup
 
 ```bash
+cp .env.example .env
+# fill Supabase URL + publishable key
+# optional: RESEND_API_KEY for finish/turn emails
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` — start a chain at `/play/new`, or use `/lab` for the canvas-only playground.
+Open `http://localhost:3000` — start a loop at `/play/new`, or use `/lab` for the canvas-only playground.
 
-### Supabase (Phase 2)
+### Local-only tools
 
-1. Copy `.env.example` → `.env` and set project URL + publishable key.
-2. Apply the migration in `supabase/migrations/` (SQL editor, or `supabase db push` after `supabase link`).
-3. Confirm RPCs `create_chain`, `get_play_payload`, `submit_step`, `get_reveal` exist.
+- Dev inspector (`/c/:slug/dev`) and its links appear **only in `npm run dev`** when `NUXT_PUBLIC_DEV_INSPECTOR_KEY` is set. Production builds hide them so you can play as a real user.
+
+### Supabase
+
+1. Apply migrations in `supabase/migrations/` (`supabase db push` or SQL editor).
+2. Confirm RPCs exist (`create_chain`, `get_play_payload`, `submit_step`, `get_reveal`, …).
+
+### Email (Resend)
+
+1. Create an API key at [resend.com](https://resend.com)
+2. Set `RESEND_API_KEY` and optionally `RESEND_FROM_EMAIL` (verified domain for production)
+3. `POST /api/notify` with `{ type: 'turn'|'finished', to, playUrl|revealUrl }`
+
+Until a domain is verified, Resend’s test sender `onboarding@resend.dev` only delivers to your own account / test addresses.
 
 ## Scripts
 
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Dev server |
+| `npm run test` | Unit tests |
 | `npm run build` | Production build |
 | `npm run preview` | Preview production build |

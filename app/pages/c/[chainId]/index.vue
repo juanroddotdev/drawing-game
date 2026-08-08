@@ -4,6 +4,7 @@ import type { ChainHubStatus } from '~/types/chain'
 const route = useRoute()
 const api = useChainApi()
 const { nickname, save } = usePlayerProfile()
+const { enabled: showDevTools } = useDevTools()
 
 const slug = computed(() => String(route.params.chainId || ''))
 const status = ref<ChainHubStatus | null>(null)
@@ -126,6 +127,7 @@ onMounted(load)
             Open reveal
           </NuxtLink>
           <NuxtLink
+            v-if="showDevTools"
             :to="`/c/${slug}/dev`"
             class="rounded-xl border border-dashed border-slate-400 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
           >

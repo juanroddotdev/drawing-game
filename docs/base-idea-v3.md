@@ -150,3 +150,18 @@ Automated image moderation APIs screen drawings in public queues before distribu
 
 9. **Chain length — default 6**  
    Default max **6 steps** = typically **3 drawings + 3 guesses** (draw → guess → draw → guess → draw → guess). Doesn’t require 6 people online or even 6 unique friends: async forward fills seats; same small group can pass it around. Optional shorter length (e.g. 4) can be a create-time choice later.
+
+10. **Product name — DoodleLoop**  
+    App name is **DoodleLoop** (repo may still be `drawing-game`).
+
+11. **Timeout — 24h default; creator rules later**  
+    Keep **24 hours** for V1. Longer-term: loop creators can configure timeout and other rules at create time.
+
+12. **Same player twice — allow for now**  
+    Allowed so small groups and solo testing work. Revisit when creator rules land (optional “unique players only”).
+
+13. **Creator kick — deferred**  
+    “Creator kick” = creator can skip a stuck friend *before* the 24h timeout. V1 stays timeout + re-invite only.
+
+14. **Dev inspector — local only**  
+    `/c/:slug/dev` and its entry points only appear in `npm run dev` when the inspector key is set. Production builds hide them.

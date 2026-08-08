@@ -91,6 +91,7 @@ function onPointerDown(e: PointerEvent) {
   if (props.disabled) return
   const canvas = canvasRef.value
   if (!canvas) return
+  e.preventDefault()
   canvas.setPointerCapture(e.pointerId)
   drawing.value = true
   const p = pointerToNorm(e)
@@ -101,6 +102,10 @@ function onPointerDown(e: PointerEvent) {
   if (ctx && document.value.strokes.length) {
     paintStroke(ctx, document.value.strokes[document.value.strokes.length - 1], cssSize, cssSize, dpr)
   }
+}
+
+function onContextMenu(e: Event) {
+  e.preventDefault()
 }
 
 function onPointerMove(e: PointerEvent) {
@@ -208,12 +213,13 @@ defineExpose({ clear, undo, canUndo })
       <canvas
         ref="canvasRef"
         class="block touch-none select-none"
-        style="touch-action: none"
+        style="touch-action: none; -webkit-user-select: none; -webkit-touch-callout: none;"
         :class="disabled ? 'pointer-events-none opacity-70' : 'cursor-crosshair'"
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
         @pointercancel="onPointerUp"
+        @contextmenu="onContextMenu"
       />
     </div>
   </div>

@@ -7,18 +7,22 @@ Already decided items live in [`base-idea-v3.md`](./base-idea-v3.md) under **Pro
 
 ## Naming & presence
 
-- [ ] What is the product / game name?
+- [x] What is the product / game name? → **DoodleLoop**
 - [ ] Do we need a matching `.com` (or is `.app` / `.game` / etc. acceptable)?
-- [ ] GitHub repo name — same as product, or different?
+- [x] GitHub repo name — can stay `drawing-game` for now; rename later if desired
+- [x] Timeout duration? → **24h** default; creator-configurable rules later
+- [x] Same player twice? → **allow for now**
+- [x] Creator kick before timeout? → **deferred** (timeout + re-invite only)
+- [x] Dev inspector → **local `npm run dev` only**
 
 ---
 
 ## Core loop & rules
 
 - [x] Default chain length? → **6** (3 draws + 3 guesses); optional shorter later
-- [ ] Timeout duration before a stuck step frees? (spec says 24h — shorter for friend chains?)
-- [ ] Can the **creator** kick/skip a stuck player before timeout, or only auto-timeout + re-invite?
-- [ ] Can a player appear more than once in the same chain? (recommended default: **yes**, for small friend groups)
+- [x] Timeout duration before a stuck step frees? → **24h** (creator rules later)
+- [x] Can the **creator** kick/skip a stuck player before timeout? → **deferred**
+- [x] Can a player appear more than once in the same chain? → **yes for now**
 - [x] Opening prompt? → **noun + action/state combo**, reroll + optional edit; decks later
 - [ ] After reveal, can anyone re-share the gallery link, or only participants?
 

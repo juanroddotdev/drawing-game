@@ -1,4 +1,4 @@
-const PLAYER_KEY = 'penpass.player'
+const PLAYER_KEY = 'doodleloop.player'
 
 export type SavedPlayer = {
   nickname: string

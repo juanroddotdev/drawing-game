@@ -3,7 +3,7 @@ import type { DrawingDocument } from '~/types/stroke'
 import { createEmptyDocument, documentToJson, parseDrawingDocument } from '~/utils/canvas/strokes'
 
 useHead({
-  title: 'PenPass — Canvas Lab',
+  title: 'DoodleLoop — Canvas Lab',
 })
 
 const drawing = ref<DrawingDocument>(createEmptyDocument())
@@ -45,7 +45,7 @@ function reRenderFromJson() {
           Phase 1
         </p>
         <h1 class="text-3xl font-bold tracking-tight">
-          PenPass canvas lab
+          DoodleLoop canvas lab
         </h1>
         <p class="max-w-2xl text-slate-600">
           Draw with vector strokes, export JSON, and re-render. No accounts or chains.

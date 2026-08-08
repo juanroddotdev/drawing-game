@@ -42,6 +42,7 @@ Read the product decisions and MVP cut below. **Do not write application code ye
 | **2** | Chain state machine + Supabase schema: prompt → draw → guess → … → complete; timeout/re-invite fields |
 | **3** | Deep links + Web Share: pass-a-turn URLs, claim/play step, basic email hooks as needed |
 | **4** | Reveal gallery + optional stroke time-lapse replay from stored vectors |
+| **Later** | Solo/dev inspector (all steps on one screen for testing without friends) |
 
 ### What to output now
 

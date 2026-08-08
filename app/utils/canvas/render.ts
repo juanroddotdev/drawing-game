@@ -95,3 +95,14 @@ export function filterStrokesUntil(doc: DrawingDocument, untilMs: number): Drawi
       .filter((s) => s.points.length > 0),
   }
 }
+
+/** Max point timestamp in the document (ms from drawing start). */
+export function documentDurationMs(doc: DrawingDocument): number {
+  let max = 0
+  for (const stroke of doc.strokes) {
+    for (const p of stroke.points) {
+      if (p.t > max) max = p.t
+    }
+  }
+  return max
+}

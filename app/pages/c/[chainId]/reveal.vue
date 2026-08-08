@@ -28,15 +28,26 @@ onMounted(load)
   <main class="min-h-dvh bg-gradient-to-b from-slate-100 to-slate-200 px-4 py-8 text-slate-900">
     <div class="mx-auto flex max-w-2xl flex-col gap-6">
       <header class="space-y-1">
-        <NuxtLink
-          to="/"
-          class="text-sm font-medium text-slate-500 hover:text-slate-800"
-        >
-          ← Home
-        </NuxtLink>
+        <div class="flex flex-wrap gap-3 text-sm font-medium text-slate-500">
+          <NuxtLink
+            to="/"
+            class="hover:text-slate-800"
+          >
+            ← Home
+          </NuxtLink>
+          <NuxtLink
+            :to="`/c/${slug}`"
+            class="hover:text-slate-800"
+          >
+            Chain status
+          </NuxtLink>
+        </div>
         <h1 class="text-2xl font-bold tracking-tight">
-          Reveal
+          The reveal
         </h1>
+        <p class="text-sm text-slate-600">
+          Step through the telephone — drawings replay stroke by stroke.
+        </p>
       </header>
 
       <p
@@ -49,47 +60,10 @@ onMounted(load)
         </span>
       </p>
 
-      <template v-else-if="reveal">
-        <div class="rounded-xl border border-slate-200 bg-white p-4">
-          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Original prompt
-          </p>
-          <p class="text-lg font-medium">
-            {{ reveal.prompt_text }}
-          </p>
-          <p class="mt-1 text-sm text-slate-500">
-            by {{ reveal.creator_nickname }}
-          </p>
-        </div>
-
-        <ol class="space-y-4">
-          <li
-            v-for="step in reveal.steps"
-            :key="step.step_number"
-            class="rounded-xl border border-slate-200 bg-white p-4"
-          >
-            <p class="text-sm font-semibold text-slate-700">
-              Step {{ step.step_number }}
-              · {{ step.type }}
-              <span
-                v-if="step.author_nickname"
-                class="font-normal text-slate-500"
-              >— {{ step.author_nickname }}</span>
-            </p>
-            <CanvasStrokeRenderer
-              v-if="step.type === 'draw' && step.stroke_json"
-              class="mt-3"
-              :document="step.stroke_json"
-            />
-            <p
-              v-else-if="step.guess_text"
-              class="mt-2 text-base"
-            >
-              “{{ step.guess_text }}”
-            </p>
-          </li>
-        </ol>
-      </template>
+      <ChainRevealGallery
+        v-else-if="reveal"
+        :reveal="reveal"
+      />
 
       <p
         v-else

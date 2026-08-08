@@ -40,6 +40,7 @@ Already decided items live in [`base-idea-v3.md`](./base-idea-v3.md) under **Pro
 - [ ] Canvas aspect ratio — square (best for social), or flexible?
 - [ ] Max stroke/time limits per drawing step?
 - [ ] Which alternate modes ship in V1, if any? (blind, speed run, palette lock, one-continuous-line)
+- [ ] **Dev / solo inspector** — a debug view that shows all chain steps on one screen (for testing without friends). Plan after Phase 4 reveal polish.
 
 ---
 

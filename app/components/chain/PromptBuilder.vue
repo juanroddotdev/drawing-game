@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { generatePrompt } from '~/utils/prompts/generatePrompt'
+
 const prompt = defineModel<string>({ required: true })
 
 function reroll() {

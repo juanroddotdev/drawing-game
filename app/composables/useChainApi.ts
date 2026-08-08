@@ -1,5 +1,6 @@
 import type { DrawingDocument } from '~/types/stroke'
 import type {
+  ChainHubStatus,
   CreateChainResult,
   PlayPayload,
   RevealPayload,
@@ -19,12 +20,14 @@ export function useChainApi() {
     nickname: string
     strokeJson: DrawingDocument
     maxSteps?: number
+    email?: string
   }): Promise<CreateChainResult> {
     const { data, error } = await supabase.rpc('create_chain', {
       p_prompt_text: input.promptText,
       p_nickname: input.nickname,
       p_stroke_json: input.strokeJson,
       p_max_steps: input.maxSteps ?? DEFAULT_MAX_STEPS,
+      p_email: input.email || null,
     })
     if (error) rpcError(error)
     return data as CreateChainResult
@@ -45,6 +48,7 @@ export function useChainApi() {
     nickname: string
     guessText?: string
     strokeJson?: DrawingDocument
+    email?: string
   }): Promise<SubmitStepResult> {
     const { data, error } = await supabase.rpc('submit_step', {
       p_slug: input.slug,
@@ -52,6 +56,7 @@ export function useChainApi() {
       p_nickname: input.nickname,
       p_guess_text: input.guessText ?? null,
       p_stroke_json: input.strokeJson ?? null,
+      p_email: input.email || null,
     })
     if (error) rpcError(error)
     return data as SubmitStepResult
@@ -64,6 +69,14 @@ export function useChainApi() {
     })
     if (error) rpcError(error)
     return data as { slug: string, status: string, next_step: number, claim_token: string }
+  }
+
+  async function getChainStatus(slug: string): Promise<ChainHubStatus> {
+    const { data, error } = await supabase.rpc('get_chain_status', {
+      p_slug: slug,
+    })
+    if (error) rpcError(error)
+    return data as ChainHubStatus
   }
 
   async function getReveal(slug: string): Promise<RevealPayload> {
@@ -79,6 +92,7 @@ export function useChainApi() {
     getPlayPayload,
     submitStep,
     reopenSeat,
+    getChainStatus,
     getReveal,
   }
 }

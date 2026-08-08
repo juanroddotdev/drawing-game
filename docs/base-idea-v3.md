@@ -129,8 +129,24 @@ Automated image moderation APIs screen drawings in public queues before distribu
 2. **Drawing bar — middle ground**  
    Not bare marker-only, not a full art suite. Aim for: a few colors, brush sizes, undo, maybe eraser — enough to make decent doodles without layers or complex tools.
 
-3. **Identity — light account for notifications**  
-   Players need at least a **nickname** plus **phone number or email** so we can send game-finished (and likely “your turn”) SMS/email. Not fully anonymous; keep signup as light as possible.
+3. **Identity — light play + optional account**  
+   Passwordless to play (nickname + contact). Optional account upgrade to save / revisit past games. Not fully anonymous.
 
 4. **Stuck steps — timeout + open invite**  
    If someone doesn’t go (timeout), that slot frees and the chain stays alive. Example: Player 2 ghosts → timeout → Player 1 (or the last person who completed a step) gets the link back and can forward it to **anyone** for the next step, repeating as needed until the chain hits max steps. Creator kick/skip can coexist with auto-timeout; exact creator controls TBD.
+
+5. **Opening prompts — combo + edit**  
+   V1 prompts are generated from small drawable word banks (e.g. noun + action/state → “a penguin late for work”). Creator can **reroll** a few times and **edit** freely before drawing. Themed/paid decks later; no blank-only free-text as the default path.
+
+6. **MVP cut**  
+   **In:** create chain → draw/guess alternate → share link → timeout + re-invite → reveal (static panels; simple stroke replay if cheap).  
+   **Out for V1:** Bottle/community, GIF/video export polish, paid decks, alternate modes, Hall of Fame.
+
+7. **Notifications — email first, SMS later**  
+   V1 uses **email** for “your turn” / “game finished” (cheap, global, simple). The share link itself is the main turn-pass mechanic among friends. Optional **Web Push** (PWA) when installed. **SMS later** when volume or monetization justifies Twilio/etc. cost and US A2P registration.
+
+8. **Stack — Nuxt + Supabase**  
+   Vue-based (**Nuxt**) so we build on existing familiarity; **Supabase** for Auth (magic link), DB, and stroke/file storage. Best velocity vs learning Next.js from scratch for this async link game.
+
+9. **Chain length — default 6**  
+   Default max **6 steps** = typically **3 drawings + 3 guesses** (draw → guess → draw → guess → draw → guess). Doesn’t require 6 people online or even 6 unique friends: async forward fills seats; same small group can pass it around. Optional shorter length (e.g. 4) can be a create-time choice later.

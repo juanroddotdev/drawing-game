@@ -2,6 +2,7 @@
 import { generatePrompt } from '~/utils/prompts/generatePrompt'
 
 const prompt = defineModel<string>({ required: true })
+const editing = ref(false)
 
 function reroll() {
   prompt.value = generatePrompt()
@@ -14,26 +15,30 @@ onMounted(() => {
 
 <template>
   <div class="space-y-2">
-    <label class="block text-sm font-medium text-slate-700">
-      Prompt
-    </label>
-    <div class="flex gap-2">
-      <input
-        v-model="prompt"
-        type="text"
-        class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-        maxlength="120"
-      >
+    <div class="flex items-center gap-2">
       <button
         type="button"
-        class="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium"
+        class="min-w-0 flex-1 truncate rounded-full border border-slate-200 bg-white px-4 py-2.5 text-left text-sm font-semibold text-slate-900 shadow-sm"
+        @click="editing = !editing"
+      >
+        {{ prompt || 'Tap to set prompt' }}
+      </button>
+      <button
+        type="button"
+        class="h-11 shrink-0 rounded-full border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800"
         @click="reroll"
       >
         Reroll
       </button>
     </div>
-    <p class="text-xs text-slate-500">
-      Combo prompt — edit freely before you draw.
-    </p>
+    <input
+      v-if="editing"
+      v-model="prompt"
+      type="text"
+      class="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-base"
+      maxlength="120"
+      placeholder="Edit prompt"
+      @blur="editing = false"
+    >
   </div>
 </template>

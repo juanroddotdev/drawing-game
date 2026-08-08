@@ -1,6 +1,7 @@
 import type { DrawingDocument } from '~/types/stroke'
 import type {
   ChainHubStatus,
+  ChainInspectorPayload,
   CreateChainResult,
   PlayPayload,
   RevealPayload,
@@ -87,6 +88,29 @@ export function useChainApi() {
     return data as RevealPayload
   }
 
+  function devInspectorKey(): string {
+    const config = useRuntimeConfig()
+    return String(config.public.devInspectorKey || '')
+  }
+
+  async function getChainInspector(slug: string): Promise<ChainInspectorPayload> {
+    const { data, error } = await supabase.rpc('get_chain_inspector', {
+      p_slug: slug,
+      p_key: devInspectorKey(),
+    })
+    if (error) rpcError(error)
+    return data as ChainInspectorPayload
+  }
+
+  async function devMintPlayLink(slug: string) {
+    const { data, error } = await supabase.rpc('dev_mint_play_link', {
+      p_slug: slug,
+      p_key: devInspectorKey(),
+    })
+    if (error) rpcError(error)
+    return data as { slug: string, next_step: number, step_type: string, claim_token: string }
+  }
+
   return {
     createChain,
     getPlayPayload,
@@ -94,5 +118,7 @@ export function useChainApi() {
     reopenSeat,
     getChainStatus,
     getReveal,
+    getChainInspector,
+    devMintPlayLink,
   }
 }

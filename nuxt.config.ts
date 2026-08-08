@@ -7,6 +7,7 @@ export default defineNuxtConfig({
     public: {
       supabaseUrl: '',
       supabaseAnonKey: '',
+      devInspectorKey: '',
     },
   },
   app: {

@@ -80,3 +80,28 @@ export function sharePath(slug: string, token: string): string {
 export function isExpiredTokenError(message: string): boolean {
   return /invalid_or_expired_token/i.test(message)
 }
+
+export type InspectorStep = {
+  step_number: number
+  type: StepType
+  status: string
+  author_nickname: string | null
+  guess_text: string | null
+  stroke_json: DrawingDocument | null
+  submitted_at: string | null
+  due_at: string | null
+}
+
+export type ChainInspectorPayload = {
+  slug: string
+  status: ChainStatus
+  prompt_text: string
+  creator_nickname: string
+  max_steps: number
+  current_step: number
+  last_completer_nickname: string | null
+  current_step_status: string
+  current_step_type: StepType
+  due_at: string | null
+  steps: InspectorStep[]
+}

@@ -21,7 +21,7 @@ useHead({ title: computed(() => `Dev inspector — ${slug.value}`) })
 async function load() {
   error.value = ''
   if (!showDevTools.value) {
-    error.value = 'Dev inspector is only available in local development.'
+    error.value = 'Dev inspector requires NUXT_PUBLIC_DEV_INSPECTOR_KEY.'
     return
   }
   try {

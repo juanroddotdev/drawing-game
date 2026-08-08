@@ -13,7 +13,7 @@ Already decided items live in [`base-idea-v3.md`](./base-idea-v3.md) under **Pro
 - [x] Timeout duration? → **24h** default; creator-configurable rules later
 - [x] Same player twice? → **allow for now**
 - [x] Creator kick before timeout? → **deferred** (timeout + re-invite only)
-- [x] Dev inspector → **local `npm run dev` only**
+- [x] Dev inspector → **beta: on when `NUXT_PUBLIC_DEV_INSPECTOR_KEY` is set (incl. Vercel)**. **LAUNCH: re-lock to local-only or remove.**
 
 ---
 

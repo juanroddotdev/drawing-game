@@ -21,9 +21,10 @@ npm run dev
 
 Open `http://localhost:3000` — start a loop at `/play/new`, or use `/lab` for the canvas-only playground.
 
-### Local-only tools
+### Dev mode (closed beta)
 
-- Dev inspector (`/c/:slug/dev`) and its links appear **only in `npm run dev`** when `NUXT_PUBLIC_DEV_INSPECTOR_KEY` is set. Production builds hide them so you can play as a real user.
+- When `NUXT_PUBLIC_DEV_INSPECTOR_KEY` is set (local **or** Vercel), the app shows **Dev mode** (`/dev`), Pass **Play next myself**, and `/c/:slug/dev`.
+- **LAUNCH:** remove or re-gate to `import.meta.dev` only before public launch — the public key is visible in the client bundle.
 
 ### Supabase
 

@@ -163,5 +163,5 @@ Automated image moderation APIs screen drawings in public queues before distribu
 13. **Creator kick — deferred**  
     “Creator kick” = creator can skip a stuck friend *before* the 24h timeout. V1 stays timeout + re-invite only.
 
-14. **Dev inspector — local only**  
-    `/c/:slug/dev` and its entry points only appear in `npm run dev` when the inspector key is set. Production builds hide them.
+14. **Dev inspector — closed beta (LAUNCH: strip)**  
+    When `NUXT_PUBLIC_DEV_INSPECTOR_KEY` is set, `/dev`, Pass **Play next myself**, and `/c/:slug/dev` appear in **any** build (including Vercel). Re-lock to local-only or remove before public launch.

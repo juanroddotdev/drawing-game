@@ -9,7 +9,10 @@ export default defineNuxtConfig({
     public: {
       supabaseUrl: '',
       supabaseAnonKey: '',
-      /** Only honored together with `import.meta.dev` for inspector UI. */
+      /**
+       * When set, shows beta Dev mode UI (Play next, /dev, inspector).
+       * LAUNCH: remove or re-gate to local-only before public launch.
+       */
       devInspectorKey: '',
     },
   },

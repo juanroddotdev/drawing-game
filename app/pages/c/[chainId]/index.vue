@@ -125,6 +125,12 @@ onMounted(load)
           >
             Open reveal
           </NuxtLink>
+          <NuxtLink
+            :to="`/c/${slug}/dev`"
+            class="rounded-xl border border-dashed border-slate-400 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
+          >
+            Dev inspector
+          </NuxtLink>
           <button
             type="button"
             class="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold"

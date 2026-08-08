@@ -40,6 +40,7 @@ Already decided items live in [`base-idea-v3.md`](./base-idea-v3.md) under **Pro
 - [ ] Canvas aspect ratio — square (best for social), or flexible?
 - [ ] Max stroke/time limits per drawing step?
 - [ ] Which alternate modes ship in V1, if any? (blind, speed run, palette lock, one-continuous-line)
+- [x] **Dev / solo inspector** — `/c/:slug/dev` shows all steps; mint play link for solo testing. (Gate with `NUXT_PUBLIC_DEV_INSPECTOR_KEY`; remove/harden before public launch.)
 
 ---
 

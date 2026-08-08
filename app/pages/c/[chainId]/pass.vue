@@ -39,6 +39,22 @@ useHead({ title: 'Pass the link — PenPass' })
       <p class="text-xs text-slate-500">
         Chain <span class="font-mono">{{ slug }}</span>
       </p>
+
+      <div class="flex flex-wrap gap-2 border-t border-slate-300/70 pt-4">
+        <NuxtLink
+          v-if="token"
+          :to="`/c/${slug}/play?token=${encodeURIComponent(token)}`"
+          class="rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950"
+        >
+          Play next step myself
+        </NuxtLink>
+        <NuxtLink
+          :to="`/c/${slug}/dev`"
+          class="rounded-xl border border-dashed border-slate-400 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-700"
+        >
+          Dev inspector
+        </NuxtLink>
+      </div>
     </div>
   </main>
 </template>

@@ -55,6 +55,17 @@ export type RevealPayload = {
   steps: RevealStep[]
 }
 
+export type ChainHubStatus = {
+  slug: string
+  status: ChainStatus
+  max_steps: number
+  current_step: number
+  last_completer_nickname: string | null
+  step_status: string
+  step_type: StepType
+  due_at: string | null
+}
+
 export const DEFAULT_MAX_STEPS = 6
 export const DEFAULT_TIMEOUT_HOURS = 24
 
@@ -64,4 +75,8 @@ export function stepTypeForNumber(stepNumber: number): StepType {
 
 export function sharePath(slug: string, token: string): string {
   return `/c/${slug}/play?token=${encodeURIComponent(token)}`
+}
+
+export function isExpiredTokenError(message: string): boolean {
+  return /invalid_or_expired_token/i.test(message)
 }

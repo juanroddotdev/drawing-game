@@ -13,7 +13,7 @@ useHead({ title: 'PenPass' })
           Draw. Pass. Guess. Repeat.
         </h1>
         <p class="text-slate-600">
-          Async telephone with friends — Phase 2 chain loop is live once Supabase migrations are applied.
+          Async telephone with friends — share a link, pass the turn, reveal the chaos.
         </p>
       </header>
 

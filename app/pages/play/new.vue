@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { DrawingDocument } from '~/types/stroke'
 import { createEmptyDocument } from '~/utils/canvas/strokes'
+
 useHead({ title: 'Start a chain — PenPass' })
 
 const api = useChainApi()
+const { nickname, email, save } = usePlayerProfile()
 
-const nickname = ref('')
 const prompt = ref('')
 const drawing = ref<DrawingDocument>(createEmptyDocument())
 const busy = ref(false)
@@ -28,10 +29,12 @@ async function startChain() {
 
   busy.value = true
   try {
+    save()
     const result = await api.createChain({
       promptText: prompt.value.trim(),
       nickname: nickname.value.trim(),
       strokeJson: drawing.value,
+      email: email.value.trim() || undefined,
     })
     await navigateTo({
       path: `/c/${result.slug}/pass`,
@@ -48,7 +51,8 @@ async function startChain() {
   finally {
     busy.value = false
   }
-}</script>
+}
+</script>
 
 <template>
   <main class="min-h-dvh bg-gradient-to-b from-slate-100 to-slate-200 px-4 py-8 text-slate-900">
@@ -76,6 +80,17 @@ async function startChain() {
           maxlength="32"
           class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
           placeholder="Alex"
+        >
+      </label>
+
+      <label class="block space-y-2">
+        <span class="text-sm font-medium text-slate-700">Email <span class="font-normal text-slate-500">(optional — for finish notice later)</span></span>
+        <input
+          v-model="email"
+          type="email"
+          autocomplete="email"
+          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          placeholder="you@example.com"
         >
       </label>
 

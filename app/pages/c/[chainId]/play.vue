@@ -163,7 +163,91 @@ onMounted(load)
 </script>
 
 <template>
-  <main class="flex min-h-dvh flex-col bg-gradient-to-b from-slate-100 to-slate-200 text-slate-900">
+  <!-- Draw: full-bleed canvas shell -->
+  <main
+    v-if="payload && payload.step_type === 'draw' && !expired && !loadError"
+    class="relative mx-auto flex h-dvh max-w-lg flex-col bg-slate-200 text-slate-900"
+  >
+    <div class="pointer-events-none absolute inset-x-0 top-0 z-20 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <NuxtLink
+        :to="`/c/${slug}`"
+        class="pointer-events-auto absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/90 text-slate-700 shadow-md backdrop-blur-md"
+        aria-label="Chain status"
+        title="Chain status"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          class="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M8 6h13" />
+          <path d="M8 12h13" />
+          <path d="M8 18h13" />
+          <path d="M3 6h.01" />
+          <path d="M3 12h.01" />
+          <path d="M3 18h.01" />
+        </svg>
+      </NuxtLink>
+      <div class="mx-auto flex justify-center px-12">
+        <div class="pointer-events-auto">
+          <ChainPromptBuilder
+            :model-value="payload.prior_guess_text || 'Draw this'"
+            :editable="false"
+          />
+        </div>
+      </div>
+    </div>
+
+    <p
+      v-if="payload"
+      class="pointer-events-none absolute inset-x-0 top-[3.25rem] z-10 text-center text-[11px] font-medium text-slate-500"
+    >
+      Step {{ payload.step_number }} of {{ payload.max_steps }}
+    </p>
+
+    <div class="min-h-0 flex-1">
+      <CanvasDrawingCanvas v-model="drawing">
+        <template #action>
+          <button
+            type="button"
+            class="flex h-10 items-center rounded-full bg-slate-950 px-4 text-sm font-semibold text-white shadow-md disabled:opacity-50"
+            :disabled="busy"
+            @click="openSubmit"
+          >
+            Done
+          </button>
+        </template>
+      </CanvasDrawingCanvas>
+    </div>
+
+    <p
+      v-if="submitError"
+      class="absolute inset-x-4 top-[4.75rem] z-30 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 shadow"
+    >
+      {{ submitError }}
+    </p>
+
+    <UiPlayerSubmitSheet
+      v-model:open="sheetOpen"
+      v-model:nickname="nickname"
+      v-model:email="email"
+      title="Submit your drawing"
+      confirm-label="Submit drawing"
+      :busy="busy"
+      @confirm="submit"
+    />
+  </main>
+
+  <!-- Guess / loading / errors -->
+  <main
+    v-else
+    class="flex min-h-dvh flex-col bg-gradient-to-b from-slate-100 to-slate-200 text-slate-900"
+  >
     <div class="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pt-4">
       <header class="mb-3 space-y-1">
         <NuxtLink
@@ -177,7 +261,7 @@ onMounted(load)
           class="text-sm text-slate-600"
         >
           Step {{ payload.step_number }} of {{ payload.max_steps }}
-          · {{ payload.step_type === 'guess' ? 'Guess' : 'Draw' }}
+          · Guess
         </p>
       </header>
 
@@ -250,26 +334,6 @@ onMounted(load)
         </div>
       </template>
 
-      <template v-else-if="payload && payload.step_type === 'draw'">
-        <div
-          v-if="payload.prior_guess_text"
-          class="mb-3 truncate rounded-full border border-slate-200 bg-white px-4 py-2 text-center text-sm font-semibold text-slate-900 shadow-sm"
-        >
-          {{ payload.prior_guess_text }}
-        </div>
-
-        <div class="min-h-0 flex-1">
-          <CanvasDrawingCanvas v-model="drawing" />
-        </div>
-
-        <p
-          v-if="submitError"
-          class="mt-2 text-sm text-red-600"
-        >
-          {{ submitError }}
-        </p>
-      </template>
-
       <p
         v-else-if="!expired"
         class="text-sm text-slate-500"
@@ -278,7 +342,6 @@ onMounted(load)
       </p>
     </div>
 
-    <!-- Fixed submit for guess (keyboard-safe) -->
     <div
       v-if="payload && payload.step_type === 'guess' && !expired && !loadError"
       class="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200/80 bg-slate-100/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-slate-100/80"
@@ -296,27 +359,12 @@ onMounted(load)
       </div>
     </div>
 
-    <!-- Done bar for draw -->
-    <div
-      v-if="payload && payload.step_type === 'draw' && !expired && !loadError"
-      class="mx-auto w-full max-w-lg px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2"
-    >
-      <button
-        type="button"
-        class="w-full rounded-2xl bg-slate-900 px-4 py-4 text-base font-semibold text-white disabled:opacity-50"
-        :disabled="busy"
-        @click="openSubmit"
-      >
-        Done
-      </button>
-    </div>
-
     <UiPlayerSubmitSheet
       v-model:open="sheetOpen"
       v-model:nickname="nickname"
       v-model:email="email"
-      :title="payload?.step_type === 'guess' ? 'Submit your guess' : 'Submit your drawing'"
-      :confirm-label="payload?.step_type === 'guess' ? 'Submit guess' : 'Submit drawing'"
+      title="Submit your guess"
+      confirm-label="Submit guess"
       :busy="busy"
       @confirm="submit"
     />

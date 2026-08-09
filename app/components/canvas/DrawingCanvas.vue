@@ -52,6 +52,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null)
 const sliderRef = ref<HTMLElement | null>(null)
 const drawing = ref(false)
 const sizing = ref(false)
+const clearPromptOpen = ref(false)
 let cssSize = 300
 let dpr = 1
 let resizeObserver: ResizeObserver | null = null
@@ -166,9 +167,16 @@ function onSliderPointerUp(e: PointerEvent) {
 function requestClear() {
   if (props.disabled) return
   if (document.value.strokes.length === 0) return
-  if (window.confirm('Clear the whole drawing?')) {
-    clear()
-  }
+  clearPromptOpen.value = true
+}
+
+function confirmClear() {
+  clear()
+  clearPromptOpen.value = false
+}
+
+function cancelClear() {
+  clearPromptOpen.value = false
 }
 
 onMounted(() => {
@@ -217,6 +225,21 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
         >
           <slot name="action" />
         </div>
+      </div>
+
+      <!-- Clear confirm — sketch toast instead of system dialog -->
+      <div
+        v-if="clearPromptOpen"
+        class="pointer-events-none absolute inset-x-3 top-16 z-30 flex justify-center sm:top-12"
+      >
+        <UiSketchToast
+          message="Clear the whole drawing?"
+          tone="alert"
+          confirm-label="Clear"
+          :auto-dismiss-ms="0"
+          @confirm="confirmClear"
+          @dismiss="cancelClear"
+        />
       </div>
 
       <!-- Left size slider -->

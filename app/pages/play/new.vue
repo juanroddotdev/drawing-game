@@ -13,6 +13,17 @@ const busy = ref(false)
 const error = ref('')
 const sheetOpen = ref(false)
 
+watch(
+  () => drawing.value.strokes.length,
+  (n) => {
+    if (n > 0) error.value = ''
+  },
+)
+
+watch(prompt, () => {
+  if (error.value) error.value = ''
+})
+
 function openSubmit() {
   error.value = ''
   if (!prompt.value.trim()) {
@@ -20,7 +31,7 @@ function openSubmit() {
     return
   }
   if (drawing.value.strokes.length === 0) {
-    error.value = 'Draw something first.'
+    error.value = 'Empty canvas — draw something first.'
     return
   }
   sheetOpen.value = true
@@ -37,7 +48,7 @@ async function startChain() {
     return
   }
   if (drawing.value.strokes.length === 0) {
-    error.value = 'Draw something first.'
+    error.value = 'Empty canvas — draw something first.'
     return
   }
 
@@ -115,12 +126,12 @@ async function startChain() {
       </CanvasDrawingCanvas>
     </div>
 
-    <p
-      v-if="error"
-      class="absolute inset-x-4 top-[4.5rem] z-30 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 shadow"
-    >
-      {{ error }}
-    </p>
+    <div class="pointer-events-none absolute inset-x-3 top-[4.25rem] z-30 flex justify-center">
+      <UiSketchToast
+        :message="error"
+        @dismiss="error = ''"
+      />
+    </div>
 
     <UiPlayerSubmitSheet
       v-model:open="sheetOpen"

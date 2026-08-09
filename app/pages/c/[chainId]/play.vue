@@ -21,6 +21,17 @@ const guess = ref('')
 const drawing = ref<DrawingDocument>(createEmptyDocument())
 const sheetOpen = ref(false)
 
+watch(
+  () => drawing.value.strokes.length,
+  (n) => {
+    if (n > 0) submitError.value = ''
+  },
+)
+
+watch(guess, () => {
+  if (submitError.value) submitError.value = ''
+})
+
 useHead({
   title: computed(() => `Play — ${slug.value || 'DoodleLoop'}`),
 })
@@ -64,7 +75,7 @@ function openSubmit() {
     return
   }
   if (payload.value.step_type === 'draw' && drawing.value.strokes.length === 0) {
-    submitError.value = 'Draw something first.'
+    submitError.value = 'Empty canvas — draw something first.'
     return
   }
   sheetOpen.value = true
@@ -83,7 +94,7 @@ async function submit() {
     return
   }
   if (payload.value.step_type === 'draw' && drawing.value.strokes.length === 0) {
-    submitError.value = 'Draw something first.'
+    submitError.value = 'Empty canvas — draw something first.'
     return
   }
 
@@ -225,12 +236,12 @@ onMounted(load)
       </CanvasDrawingCanvas>
     </div>
 
-    <p
-      v-if="submitError"
-      class="absolute inset-x-4 top-[4.75rem] z-30 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 shadow"
-    >
-      {{ submitError }}
-    </p>
+    <div class="pointer-events-none absolute inset-x-3 top-[4.5rem] z-30 flex justify-center">
+      <UiSketchToast
+        :message="submitError"
+        @dismiss="submitError = ''"
+      />
+    </div>
 
     <UiPlayerSubmitSheet
       v-model:open="sheetOpen"
@@ -325,12 +336,11 @@ onMounted(load)
               autocomplete="off"
             >
           </label>
-          <p
-            v-if="submitError"
-            class="text-sm text-red-600"
-          >
-            {{ submitError }}
-          </p>
+          <UiSketchToast
+            :message="submitError"
+            class="mt-1"
+            @dismiss="submitError = ''"
+          />
         </div>
       </template>
 

@@ -39,3 +39,7 @@ Utilities: [`app/assets/css/main.css`](../app/assets/css/main.css) — `.bg-dot-
 ---
 
 Expand with component recipes once this middle ground sticks in playtesting.
+
+### Sketch toast
+
+Use [`UiSketchToast`](../app/components/ui/SketchToast.vue) for ephemeral tips **and** confirms (e.g. Clear drawing) — sticky-note yellow (`--toast-note`) or coral alert (`--toast-alert`), ink border + hard offset, slight tilt. Never `window.confirm` / system dialogs for in-app flows.

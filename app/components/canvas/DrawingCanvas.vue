@@ -50,13 +50,39 @@ watch(
 const wrapRef = ref<HTMLElement | null>(null)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const sliderRef = ref<HTMLElement | null>(null)
+const clearBtnRef = ref<HTMLButtonElement | null>(null)
 const drawing = ref(false)
 const sizing = ref(false)
+const clearPromptOpen = ref(false)
+const clearToastStyle = ref<Record<string, string>>({})
 let cssSize = 300
 let dpr = 1
 let resizeObserver: ResizeObserver | null = null
 
 const sizePreviewPx = computed(() => Math.max(6, width.value * Math.min(cssSize, 360)))
+const sizeThumbColor = computed(() => (tool.value === 'eraser' ? '#e2e8f0' : color.value))
+
+/** Dark fills need a light edge so they don't melt into the hard ink shadow. */
+function isDarkFill(hex: string): boolean {
+  const h = hex.replace('#', '')
+  if (h.length !== 6) return hex === '#111827' || hex === '#000000'
+  const r = Number.parseInt(h.slice(0, 2), 16)
+  const g = Number.parseInt(h.slice(2, 4), 16)
+  const b = Number.parseInt(h.slice(4, 6), 16)
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+  return lum < 0.35
+}
+
+const sizeThumbStyle = computed(() => {
+  const bg = sizeThumbColor.value
+  const dark = tool.value !== 'eraser' && isDarkFill(bg)
+  return {
+    backgroundColor: bg,
+    boxShadow: dark
+      ? '0 0 0 1.5px #fff, 2px 2px 0 var(--ink)'
+      : '2px 2px 0 var(--ink)',
+  }
+})
 
 function syncCanvasSize() {
   const wrap = wrapRef.value
@@ -163,12 +189,32 @@ function onSliderPointerUp(e: PointerEvent) {
   }
 }
 
+function positionClearToast() {
+  const wrap = wrapRef.value
+  const btn = clearBtnRef.value
+  if (!wrap || !btn) return
+  const wr = wrap.getBoundingClientRect()
+  const br = btn.getBoundingClientRect()
+  clearToastStyle.value = {
+    left: `${Math.max(8, Math.min(br.left - wr.left, wr.width - 16))}px`,
+    bottom: `${Math.max(8, wr.bottom - br.top + 8)}px`,
+  }
+}
+
 function requestClear() {
   if (props.disabled) return
   if (document.value.strokes.length === 0) return
-  if (window.confirm('Clear the whole drawing?')) {
-    clear()
-  }
+  clearPromptOpen.value = true
+  nextTick(positionClearToast)
+}
+
+function confirmClear() {
+  clear()
+  clearPromptOpen.value = false
+}
+
+function cancelClear() {
+  clearPromptOpen.value = false
 }
 
 onMounted(() => {
@@ -219,12 +265,36 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
         </div>
       </div>
 
+      <!-- Clear confirm — outside dock overflow so it isn't clipped -->
+      <div
+        v-if="clearPromptOpen"
+        class="pointer-events-none absolute z-40 w-[min(18rem,calc(100%-1.5rem))] -translate-x-0"
+        :style="clearToastStyle"
+      >
+        <div
+          class="pointer-events-auto"
+          @pointerdown.stop
+        >
+          <UiSketchToast
+            message="Clear the whole drawing?"
+            tone="alert"
+            confirm-label="Clear"
+            :auto-dismiss-ms="0"
+            @confirm="confirmClear"
+            @dismiss="cancelClear"
+          />
+        </div>
+      </div>
+
       <!-- Left size slider -->
       <div class="absolute left-1 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center">
         <div
           v-if="sizing"
-          class="pointer-events-none absolute bottom-full mb-3 rounded-full border-2 border-slate-900/80 bg-white/90 shadow"
-          :style="{ width: `${sizePreviewPx}px`, height: `${sizePreviewPx}px` }"
+          class="pointer-events-none absolute bottom-full mb-5 rounded-full border-2 border-[var(--ink)] bg-transparent"
+          :style="{
+            width: `${sizePreviewPx}px`,
+            height: `${sizePreviewPx}px`,
+          }"
         />
         <div
           ref="sliderRef"
@@ -237,12 +307,50 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
         >
           <div class="relative h-full w-1.5 rounded-full bg-[var(--surface)] ring-2 ring-[var(--ink)]">
             <div
-              class="absolute left-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--ink)] bg-[var(--accent)] shadow-block"
+              class="absolute left-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--ink)]"
               :style="{
                 top: `${((BRUSH_WIDTH_MAX - width) / (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)) * 100}%`,
+                backgroundColor: sizeThumbStyle.backgroundColor,
+                boxShadow: sizeThumbStyle.boxShadow,
               }"
             />
           </div>
+        </div>
+        <!-- Tool cue under track (icon only) -->
+        <div
+          class="pointer-events-none mt-5 text-[var(--ink)]"
+          :aria-label="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
+          :title="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
+        >
+          <svg
+            v-if="tool !== 'eraser'"
+            viewBox="0 0 24 24"
+            class="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.25"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
+            <path d="m5 12 4 4" />
+          </svg>
+          <svg
+            v-else
+            viewBox="0 0 24 24"
+            class="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.25"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
+            <path d="M22 21H7" />
+            <path d="m5 11 9 9" />
+          </svg>
         </div>
       </div>
 
@@ -305,6 +413,7 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
             </svg>
           </button>
           <button
+            ref="clearBtnRef"
             type="button"
             class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500"
             :disabled="disabled"

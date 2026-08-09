@@ -18,6 +18,8 @@
   --accent-deep: #65a30d;
   --accent-ink: #3f6212;
   --danger: #dc2626;
+  --toast-note: #fef08a;
+  --toast-alert: #fecaca;
   --font-ui: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-sketch: "Shantell Sans", "Comic Sans MS", cursive;
   --radius-chip: 0.75rem;

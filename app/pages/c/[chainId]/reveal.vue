@@ -25,38 +25,35 @@ onMounted(load)
 </script>
 
 <template>
-  <main class="min-h-dvh bg-gradient-to-b from-slate-100 to-slate-200 px-4 py-8 text-slate-900">
-    <div class="mx-auto flex max-w-2xl flex-col gap-6">
-      <header class="space-y-1">
-        <div class="flex flex-wrap gap-3 text-sm font-medium text-slate-500">
+  <main class="bg-dot-grid min-h-dvh px-4 py-8 text-[var(--ink)]">
+    <div class="mx-auto flex max-w-lg flex-col gap-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <header class="space-y-1 text-center">
+        <div class="flex justify-center gap-3 text-sm">
           <NuxtLink
             to="/"
-            class="hover:text-slate-800"
+            class="btn-quiet !px-1 !py-1"
           >
-            ← Home
+            Home
           </NuxtLink>
           <NuxtLink
             :to="`/c/${slug}`"
-            class="hover:text-slate-800"
+            class="btn-quiet !px-1 !py-1"
           >
-            Chain status
+            Loop status
           </NuxtLink>
         </div>
-        <h1 class="text-2xl font-bold tracking-tight">
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">
           The reveal
         </h1>
-        <p class="text-sm text-slate-600">
-          Step through the telephone — drawings replay stroke by stroke.
-        </p>
       </header>
 
       <p
         v-if="error"
-        class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+        class="border border-[var(--ink)] bg-[var(--toast-alert)] px-3 py-2 text-sm font-semibold text-[var(--ink)] shadow-block"
       >
         {{ error }}
-        <span class="block text-amber-800/80">
-          The full gallery unlocks when the chain is complete.
+        <span class="mt-1 block font-medium text-[var(--ink-muted)]">
+          The full gallery unlocks when the loop is complete.
         </span>
       </p>
 
@@ -67,7 +64,7 @@ onMounted(load)
 
       <p
         v-else
-        class="text-sm text-slate-500"
+        class="text-center text-sm text-[var(--ink-muted)]"
       >
         Loading…
       </p>

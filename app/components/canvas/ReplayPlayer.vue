@@ -8,9 +8,12 @@ const props = withDefaults(defineProps<{
   /** Playback speed multiplier (2 = twice as fast). */
   speed?: number
   autoplay?: boolean
+  /** full = play/pause/skip; minimal = canvas + Replay; overlay = canvas + corner play. */
+  chrome?: 'full' | 'minimal' | 'overlay'
 }>(), {
   speed: 2.5,
   autoplay: true,
+  chrome: 'full',
 })
 
 const emit = defineEmits<{
@@ -26,6 +29,7 @@ let cssSize = 300
 let dpr = 1
 let raf = 0
 let lastFrame = 0
+let resizeObserver: ResizeObserver | null = null
 
 const duration = computed(() => Math.max(documentDurationMs(props.document), 1))
 
@@ -33,7 +37,9 @@ function syncSize() {
   const wrap = wrapRef.value
   const canvas = canvasRef.value
   if (!wrap || !canvas) return
-  cssSize = Math.max(160, Math.floor(wrap.clientWidth))
+  const size = Math.floor(wrap.clientWidth)
+  if (size < 32) return
+  cssSize = Math.max(160, size)
   dpr = Math.min(window.devicePixelRatio || 1, 2)
   canvas.width = cssSize * dpr
   canvas.height = cssSize * dpr
@@ -104,13 +110,20 @@ watch(() => props.document, () => {
 
 onMounted(() => {
   syncSize()
-  window.addEventListener('resize', syncSize)
+  if (wrapRef.value && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => syncSize())
+    resizeObserver.observe(wrapRef.value)
+  }
+  else {
+    window.addEventListener('resize', syncSize)
+  }
   if (props.autoplay) play()
   else paint(duration.value)
 })
 
 onBeforeUnmount(() => {
   pause()
+  resizeObserver?.disconnect()
   window.removeEventListener('resize', syncSize)
 })
 
@@ -118,10 +131,15 @@ defineExpose({ play, pause, replay, showFinal })
 </script>
 
 <template>
-  <div class="space-y-2">
+  <div :class="chrome === 'overlay' ? 'relative w-full' : 'space-y-2'">
     <div
       ref="wrapRef"
-      class="w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+      class="w-full overflow-hidden bg-[var(--canvas)]"
+      :class="chrome === 'overlay'
+        ? ''
+        : chrome === 'minimal'
+          ? 'border border-[var(--ink)]'
+          : 'rounded-[var(--radius-chip)] border border-[var(--ink)] shadow-block'"
     >
       <canvas
         ref="canvasRef"
@@ -129,7 +147,40 @@ defineExpose({ play, pause, replay, showFinal })
         style="touch-action: none"
       />
     </div>
-    <div class="flex flex-wrap gap-2">
+
+    <button
+      v-if="chrome === 'overlay' && !playing"
+      type="button"
+      class="absolute bottom-2.5 right-2.5 z-10 flex size-9 items-center justify-center rounded-full border border-[var(--ink)] bg-[var(--surface)] text-[var(--ink)] shadow-block transition hover:bg-[var(--accent)]"
+      aria-label="Play drawing"
+      @click="play"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        class="ml-0.5 h-4 w-4"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M8 5.5v13l11-6.5L8 5.5Z" />
+      </svg>
+    </button>
+
+    <div
+      v-else-if="chrome === 'minimal'"
+      class="flex justify-center"
+    >
+      <button
+        type="button"
+        class="btn-quiet !px-2 !py-1 text-xs"
+        @click="replay"
+      >
+        Replay
+      </button>
+    </div>
+    <div
+      v-else-if="chrome === 'full'"
+      class="flex flex-wrap gap-2"
+    >
       <button
         type="button"
         class="btn-ink !px-3 !py-1.5 text-sm"

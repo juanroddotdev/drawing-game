@@ -12,7 +12,7 @@
         <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
           Prompt
         </span>
-        <p class="font-sketch rounded-xl border-2 border-[var(--ink)] bg-[var(--ink)] px-3 py-3 text-sm font-semibold leading-snug text-white">
+        <p class="rounded-lg border border-[var(--ink)] bg-[var(--ink)] px-3 py-3 text-sm font-semibold leading-snug text-white">
           Cat on a skateboard
         </p>
       </li>
@@ -21,7 +21,7 @@
         <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
           Drawing
         </span>
-        <div class="relative flex aspect-square items-center justify-center rounded-xl border-2 border-dashed border-[var(--ink)] bg-[var(--canvas)]">
+        <div class="relative flex aspect-square items-center justify-center rounded-lg border border-dashed border-[var(--ink)] bg-[var(--canvas)]">
           <svg
             viewBox="0 0 120 120"
             class="h-[72%] w-[72%] text-[var(--ink)]"
@@ -69,7 +69,7 @@
             />
             <path d="M48 88 L72 88" />
           </svg>
-          <span class="pointer-events-none absolute bottom-2 right-2 rotate-[-6deg] border-2 border-[var(--ink)] bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink)] shadow-block">
+          <span class="pointer-events-none absolute bottom-2 right-2 border border-[var(--ink)] bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink)] shadow-block">
             ink
           </span>
         </div>
@@ -79,7 +79,7 @@
         <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
           Guess
         </span>
-        <p class="font-sketch rounded-xl border-2 border-[var(--ink)] bg-[var(--accent)] px-3 py-3 text-sm font-semibold leading-snug text-[var(--ink)] shadow-block">
+        <p class="rounded-lg border border-[var(--ink)] bg-[var(--accent)] px-3 py-3 text-sm font-semibold leading-snug text-[var(--ink)] shadow-block">
           Hairy potato on wheels
         </p>
       </li>

@@ -22,7 +22,7 @@ useHead({ title: 'Pass the link — DoodleLoop' })
   <main class="bg-dot-grid min-h-dvh px-4 py-8 text-[var(--ink)]">
     <div class="mx-auto flex max-w-lg flex-col gap-5">
       <header class="space-y-1">
-        <h1 class="font-sketch text-3xl font-bold tracking-tight">
+        <h1 class="text-2xl font-bold tracking-tight">
           Pass it on
         </h1>
         <p class="text-sm font-medium text-[var(--ink-muted)]">

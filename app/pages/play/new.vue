@@ -75,7 +75,7 @@ async function startChain() {
     <div class="pointer-events-none absolute inset-x-0 top-0 z-20 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
       <NuxtLink
         to="/"
-        class="chip-sketch pointer-events-auto absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-full text-[var(--ink)]"
+        class="chip-sketch pointer-events-auto absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-xl text-[var(--ink)]"
         aria-label="Home"
         title="Home"
       >

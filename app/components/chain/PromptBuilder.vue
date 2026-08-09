@@ -29,10 +29,10 @@ onMounted(() => {
 
 <template>
   <div class="w-full max-w-[min(100%,20rem)]">
-    <div class="chip-sketch flex items-center gap-1 rounded-full py-1 pl-3 pr-1">
+    <div class="chip-sketch flex items-center gap-1 rounded-xl py-1 pl-3 pr-1">
       <button
         type="button"
-        class="font-sketch min-w-0 flex-1 truncate text-left text-sm font-semibold text-[var(--ink)]"
+        class="min-w-0 flex-1 truncate text-left text-sm font-semibold text-[var(--ink)]"
         :class="editable ? '' : 'pointer-events-none'"
         @click="startEdit"
       >

@@ -3,14 +3,15 @@
 @tailwind utilities;
 
 /**
- * DoodleLoop — Clean Neo-Brutal + Sketch tokens
+ * DoodleLoop — restrained neo-brutal sketch
+ * Playful peak snapshot: git commit 5070557
  * Living reference: docs/design-system.md
  */
 :root {
   --ink: #0f172a;
   --ink-muted: #64748b;
-  --paper: #e8eef5;
-  --paper-deep: #d5dee9;
+  --paper: #eef2f6;
+  --paper-deep: #e2e8f0;
   --surface: #ffffff;
   --canvas: #f8fafc;
   --accent: #84cc16;
@@ -19,6 +20,9 @@
   --danger: #dc2626;
   --font-ui: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-sketch: "Shantell Sans", "Comic Sans MS", cursive;
+  --radius-chip: 0.75rem;
+  --radius-panel: 0.75rem;
+  --shadow-offset: 2px;
 }
 
 @layer base {
@@ -31,16 +35,16 @@
 @layer components {
   .bg-dot-grid {
     background-color: var(--paper);
-    background-image: radial-gradient(rgba(15, 23, 42, 0.14) 1.1px, transparent 1.1px);
-    background-size: 14px 14px;
+    background-image: radial-gradient(rgba(15, 23, 42, 0.07) 1px, transparent 1px);
+    background-size: 18px 18px;
   }
 
   .shadow-block {
-    box-shadow: 2px 2px 0 var(--ink);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
   }
 
   .shadow-block-lg {
-    box-shadow: 3px 3px 0 var(--ink);
+    box-shadow: 2px 2px 0 var(--ink);
   }
 
   .font-sketch {
@@ -51,68 +55,50 @@
     font-family: var(--font-ui);
   }
 
-  /* Primary CTA — hard offset, no soft blur */
+  /* Primary CTA */
   .btn-ink {
-    @apply inline-flex items-center justify-center border-2 border-[var(--ink)] bg-[var(--ink)] px-5 py-3 text-base font-bold text-white transition;
-    box-shadow: 3px 3px 0 var(--ink);
-    border-radius: 9999px;
+    @apply inline-flex items-center justify-center border border-[var(--ink)] bg-[var(--ink)] px-5 py-3 text-base font-bold text-white transition;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
+    border-radius: var(--radius-chip);
   }
 
   .btn-ink:hover {
-    transform: translate(1px, 1px);
-    box-shadow: 2px 2px 0 var(--ink);
-  }
-
-  .btn-ink:active {
-    transform: translate(3px, 3px);
-    box-shadow: 0 0 0 var(--ink);
+    background-color: #1e293b;
   }
 
   .btn-ink:disabled {
     @apply opacity-50;
-    transform: none;
-    box-shadow: 3px 3px 0 var(--ink);
   }
 
-  /* Accent CTA — reads clearly against the ink hard shadow */
+  /* Accent CTA — reads against ink shadow */
   .btn-accent {
-    @apply inline-flex items-center justify-center border-2 border-[var(--ink)] bg-[var(--accent)] px-5 py-3 text-base font-bold text-[var(--ink)] transition;
-    box-shadow: 3px 3px 0 var(--ink);
-    border-radius: 9999px;
+    @apply inline-flex items-center justify-center border border-[var(--ink)] bg-[var(--accent)] px-5 py-3 text-base font-bold text-[var(--ink)] transition;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
+    border-radius: var(--radius-chip);
   }
 
   .btn-accent:hover {
     background-color: var(--accent-deep);
-    transform: translate(1px, 1px);
-    box-shadow: 2px 2px 0 var(--ink);
-  }
-
-  .btn-accent:active {
-    transform: translate(3px, 3px);
-    box-shadow: 0 0 0 var(--ink);
   }
 
   .btn-accent:disabled {
     @apply opacity-50;
-    transform: none;
-    box-shadow: 3px 3px 0 var(--ink);
   }
 
-  /* Floating chrome chips (home, prompt shell) */
   .chip-sketch {
-    @apply border-2 border-[var(--ink)] bg-[var(--surface)];
-    box-shadow: 2px 2px 0 var(--ink);
+    @apply border border-[var(--ink)] bg-[var(--surface)];
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
   }
 
   .panel-sketch {
-    @apply border-2 border-[var(--ink)] bg-[var(--surface)];
-    box-shadow: 3px 3px 0 var(--ink);
-    border-radius: 1.25rem;
+    @apply border border-[var(--ink)] bg-[var(--surface)];
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
+    border-radius: var(--radius-panel);
   }
 
   .dock-sketch {
-    @apply border-2 border-[var(--ink)] bg-[var(--surface)];
-    box-shadow: 2px 2px 0 var(--ink);
-    border-radius: 1rem;
+    @apply border border-[var(--ink)] bg-[var(--surface)];
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
+    border-radius: var(--radius-panel);
   }
 }

@@ -35,7 +35,7 @@ onBeforeUnmount(() => {
     <div class="relative">
       <button
         type="button"
-        class="chip-sketch flex h-11 w-11 items-center justify-center rounded-full text-[var(--ink)] transition hover:bg-[var(--paper)]"
+        class="chip-sketch flex h-11 w-11 items-center justify-center rounded-xl text-[var(--ink)] transition hover:bg-[var(--paper)]"
         :aria-expanded="open"
         aria-haspopup="menu"
         aria-label="More options"

@@ -1,45 +1,41 @@
 # DoodleLoop design system
 
-Working title: **Clean Neo-Brutal + Sketch**. This is the seed “design bible” — update it as the look settles.
+Working title: **Restrained neo-brutal** (ink borders + hard offset, limited sketch type).
+
+Playful peak (more doodle / Shantell everywhere): git commit `5070557` on `feat/sketch-neo-brutal` — restore with `git checkout 5070557 -- app/ docs/design-system.md` if you want that look back.
 
 ## Intent
 
-Feel like a friends doodle night, not a SaaS dashboard. Flat, fast, legible — with ink personality. No glossy gel, leather, paper folds, or purple glow.
+Friends doodle night, not SaaS — but calm enough for a draw session. Sharp ink edges, light paper, one lime accent. No glossy gel, leather, folds, or purple glow.
 
 ## Tokens
 
 | Token | Value | Use |
 | --- | --- | --- |
 | `--ink` | `#0f172a` | Borders, text, hard shadows |
-| `--paper` | `#e8eef5` | App chrome / page ground |
-| `--surface` | `#ffffff` | Pills, docks, cards |
+| `--paper` | `#eef2f6` | App chrome / page ground |
+| `--surface` | `#ffffff` | Chips, docks, cards |
 | `--canvas` | `#f8fafc` | Drawing surface only |
-| `--accent` | `#84cc16` | Highlight (“Repeat.”), badges |
-| `--font-ui` | DM Sans | Controls, Done, body |
-| `--font-sketch` | Shantell Sans | Brand, prompts, playful headlines |
+| `--accent` | `#84cc16` | Done / highlights |
+| `--font-ui` | DM Sans | Almost everything |
+| `--font-sketch` | Shantell Sans | **Brand wordmark only** |
 
-Utilities live in [`app/assets/css/main.css`](../app/assets/css/main.css): `.bg-dot-grid`, `.shadow-block`, `.btn-ink`, `.btn-accent`, `.chip-sketch`, `.panel-sketch`, `.dock-sketch`, `.font-sketch`.
+Utilities: [`app/assets/css/main.css`](../app/assets/css/main.css) — `.bg-dot-grid`, `.shadow-block`, `.btn-ink`, `.btn-accent`, `.chip-sketch`, `.panel-sketch`, `.dock-sketch`, `.font-sketch`.
 
 ## Rules
 
-1. **Hard offset shadows** (`2–3px 0 blur`) on chrome — never soft multi-layer blur on primary UI.
-2. **Sketch type only for prompts + marketing titles.** Keep Done / Undo / system labels in UI sans.
-3. **Dot-grid on the page**, not on the ink canvas.
-4. **No Rough.js (yet).** Prefer CSS neo-brutal chrome; add wobbly SVG later only if it still feels flat.
-5. **One accent (lime).** Don’t rainbow the UI.
+1. **1px ink borders + 2px hard offset shadows** on chrome (not soft blur).
+2. **Sketch type only for “DoodleLoop”.** Prompts and UI stay DM Sans.
+3. **Very faint dot-grid** on the page; canvas stays plain.
+4. **Accent (lime) for Done** and sparse highlights — not rainbow UI.
+5. **No Rough.js** unless we consciously reintroduce wobble later.
 
 ## Surfaces
 
-- **Landing / pass / hub:** dot-grid paper + block shadows + sketch headlines.
-- **Draw shell:** same tokens on home chip, prompt pill, Done, bottom dock; canvas stays plain.
-- **Canvas artboard:** calm rectangle; no neo-brutal clip on strokes.
-
-## Out of scope (for now)
-
-- Rough.js / Wired Elements on every control  
-- Skeuomorphic textures  
-- Dark mode  
+- Landing / pass: faint grid + block chips / panels.
+- Draw shell: same tokens on home, prompt, Done, dock.
+- Canvas artboard: calm; no neo-brutal clip on strokes.
 
 ---
 
-If this direction sticks after playtesting, expand this doc into full component recipes (button states, sheets, share card).
+Expand with component recipes once this middle ground sticks in playtesting.

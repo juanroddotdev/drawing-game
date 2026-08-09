@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { DrawingDocument } from '~/types/stroke'
 import { createEmptyDocument, documentToJson, parseDrawingDocument, undoStroke } from '~/utils/canvas/strokes'
 import { documentDurationMs, filterStrokesUntil } from '~/utils/canvas/render'
+import { smoothPoint } from '~/utils/canvas/smooth'
 import { generatePrompt } from '~/utils/prompts/generatePrompt'
 import { isExpiredTokenError, sharePath, stepTypeForNumber } from '~/types/chain'
 
@@ -31,6 +32,24 @@ describe('strokes', () => {
       ],
     }
     expect(undoStroke(doc).strokes).toHaveLength(1)
+  })
+})
+
+describe('smoothPoint', () => {
+  it('blends toward raw by alpha', () => {
+    const out = smoothPoint({ x: 0, y: 0 }, { x: 1, y: 0 }, 0.4)
+    expect(out.x).toBeCloseTo(0.4)
+    expect(out.y).toBeCloseTo(0)
+  })
+
+  it('alpha 1 follows raw exactly', () => {
+    const out = smoothPoint({ x: 0, y: 0 }, { x: 0.5, y: 0.25 }, 1)
+    expect(out).toEqual({ x: 0.5, y: 0.25 })
+  })
+
+  it('alpha 0 stays at previous', () => {
+    const out = smoothPoint({ x: 0.2, y: 0.3 }, { x: 1, y: 1 }, 0)
+    expect(out).toEqual({ x: 0.2, y: 0.3 })
   })
 })
 

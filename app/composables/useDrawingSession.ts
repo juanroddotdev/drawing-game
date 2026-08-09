@@ -1,6 +1,10 @@
 import type { BrushTool, DrawingDocument } from '~/types/stroke'
-import { BRUSH_COLORS, BRUSH_WIDTH_DEFAULT } from '~/types/stroke'
+import { BRUSH_COLORS, BRUSH_WIDTH_DEFAULT, STROKE_SMOOTHING_ALPHA } from '~/types/stroke'
 import { cloneDocument, createEmptyDocument, undoStroke } from '~/utils/canvas/strokes'
+import { smoothPoint } from '~/utils/canvas/smooth'
+
+/** Min squared distance in normalized canvas space before recording another point. */
+const MIN_POINT_DIST2 = 0.00000025
 
 export function useDrawingSession(initial?: DrawingDocument) {
   const document = ref<DrawingDocument>(initial ? cloneDocument(initial) : createEmptyDocument())
@@ -60,13 +64,16 @@ export function useDrawingSession(initial?: DrawingDocument) {
     const last = strokes[strokes.length - 1]
     const points = last.points
     const prev = points[points.length - 1]
-    const dx = x - prev.x
-    const dy = y - prev.y
-    if (dx * dx + dy * dy < 0.00000025) return
+
+    // Streamline raw input, then persist the smoothed sample (matches on-screen feel).
+    const smoothed = smoothPoint(prev, { x, y }, STROKE_SMOOTHING_ALPHA)
+    const dx = smoothed.x - prev.x
+    const dy = smoothed.y - prev.y
+    if (dx * dx + dy * dy < MIN_POINT_DIST2) return
 
     const next = {
       ...last,
-      points: [...points, { x, y, t: nowOffset() }],
+      points: [...points, { x: smoothed.x, y: smoothed.y, t: nowOffset() }],
     }
     document.value = {
       ...document.value,

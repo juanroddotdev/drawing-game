@@ -42,4 +42,10 @@ export const BRUSH_WIDTH_DEFAULT = 0.02
 /** @deprecated Prefer continuous slider; kept for tests/compat. */
 export const BRUSH_WIDTHS = [0.008, 0.014, 0.024, 0.04] as const
 
+/**
+ * Input streamline strength for live drawing (EMA).
+ * Higher = closer to raw pointer (less lag, more jitter). ~0.35–0.45 feels natural on finger.
+ */
+export const STROKE_SMOOTHING_ALPHA = 0.4
+
 export type BrushTool = 'pen' | 'eraser'

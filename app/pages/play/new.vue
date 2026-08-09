@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DrawingDocument } from '~/types/stroke'
 import { createEmptyDocument } from '~/utils/canvas/strokes'
+import { stashPassHandoff } from '~/utils/passHandoff'
 
 useHead({ title: 'Start a loop — DoodleLoop' })
 
@@ -62,11 +63,18 @@ async function startChain() {
       email: email.value.trim() || undefined,
     })
     sheetOpen.value = false
+    stashPassHandoff({
+      slug: result.slug,
+      kind: 'draw',
+      drawing: drawing.value,
+    })
     await navigateTo({
       path: `/c/${result.slug}/pass`,
       query: {
         token: result.claim_token,
         step: String(result.next_step),
+        done: '1',
+        max: String(result.max_steps),
         you: nickname.value.trim(),
       },
     })

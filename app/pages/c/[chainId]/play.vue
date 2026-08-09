@@ -3,6 +3,7 @@ import type { DrawingDocument } from '~/types/stroke'
 import { createEmptyDocument } from '~/utils/canvas/strokes'
 import type { PlayPayload } from '~/types/chain'
 import { isExpiredTokenError } from '~/types/chain'
+import { stashPassHandoff } from '~/utils/passHandoff'
 
 const route = useRoute()
 const api = useChainApi()
@@ -117,11 +118,20 @@ async function submit() {
       return
     }
 
+    stashPassHandoff({
+      slug: slug.value,
+      kind: payload.value.step_type === 'guess' ? 'guess' : 'draw',
+      drawing: payload.value.step_type === 'draw' ? drawing.value : null,
+      guessText: payload.value.step_type === 'guess' ? guess.value.trim() : null,
+    })
+
     await navigateTo({
       path: `/c/${slug.value}/pass`,
       query: {
         token: result.claim_token || '',
         step: String(result.next_step || ''),
+        done: String(result.completed_step),
+        max: String(payload.value.max_steps),
         you: nickname.value.trim(),
       },
     })

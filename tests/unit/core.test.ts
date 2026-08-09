@@ -7,6 +7,8 @@ import { generatePrompt } from '~/utils/prompts/generatePrompt'
 import { indefiniteArticle, withIndefiniteArticle } from '~/utils/prompts/indefiniteArticle'
 import { PROMPT_NOUNS } from '~/utils/prompts/wordBanks'
 import { isExpiredTokenError, sharePath, stepTypeForNumber } from '~/types/chain'
+import { displayShareUrl } from '~/utils/passHandoff'
+import { formatPassSubheader, pickPassSubheader } from '~/utils/passCopy'
 
 describe('strokes', () => {
   it('round-trips JSON', () => {
@@ -104,6 +106,21 @@ describe('prompts & chain helpers', () => {
 
   it('sharePath encodes token', () => {
     expect(sharePath('abc', 'tok/en')).toContain('token=tok%2Fen')
+  })
+
+  it('displayShareUrl hides the claim token', () => {
+    expect(displayShareUrl('https://doodleloop.app/c/2f8249fc57/play?token=secret'))
+      .toBe('doodleloop.app/c/2f8249fc…')
+    expect(displayShareUrl('http://localhost:3000/c/abcdefghij/play?token=x'))
+      .toBe('localhost:3000/c/abcdefgh…')
+  })
+
+  it('formats pass subheaders with or without a name', () => {
+    expect(formatPassSubheader('Pure art, {name}. Pass it on.', 'Juan'))
+      .toBe('Pure art, Juan. Pass it on.')
+    expect(formatPassSubheader('Pure art, {name}. Pass it on.', ''))
+      .toBe('Pure art. Pass it on.')
+    expect(pickPassSubheader('draw', 'Alex')).toContain('Alex')
   })
 
   it('detects expired token errors', () => {

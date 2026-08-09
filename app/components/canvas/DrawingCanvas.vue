@@ -227,21 +227,6 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
         </div>
       </div>
 
-      <!-- Clear confirm — sketch toast instead of system dialog -->
-      <div
-        v-if="clearPromptOpen"
-        class="pointer-events-none absolute inset-x-3 top-16 z-30 flex justify-center sm:top-12"
-      >
-        <UiSketchToast
-          message="Clear the whole drawing?"
-          tone="alert"
-          confirm-label="Clear"
-          :auto-dismiss-ms="0"
-          @confirm="confirmClear"
-          @dismiss="cancelClear"
-        />
-      </div>
-
       <!-- Left size slider -->
       <div class="absolute left-1 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center">
         <div
@@ -327,30 +312,46 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
               <path d="m5 11 9 9" />
             </svg>
           </button>
-          <button
-            type="button"
-            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500"
-            :disabled="disabled"
-            aria-label="Clear drawing"
-            title="Clear"
-            @pointerdown.stop
-            @click="requestClear"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              class="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
+          <div class="relative shrink-0">
+            <button
+              type="button"
+              class="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500"
+              :disabled="disabled"
+              aria-label="Clear drawing"
+              title="Clear"
+              @pointerdown.stop
+              @click="requestClear"
             >
-              <path d="M3 6h18" />
-              <path d="M8 6V4h8v2" />
-              <path d="m19 6-1 14H6L5 6" />
-            </svg>
-          </button>
+              <svg
+                viewBox="0 0 24 24"
+                class="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 6h18" />
+                <path d="M8 6V4h8v2" />
+                <path d="m19 6-1 14H6L5 6" />
+              </svg>
+            </button>
+            <!-- Confirm anchored above Clear -->
+            <div
+              v-if="clearPromptOpen"
+              class="absolute bottom-full left-0 z-30 mb-2 w-[min(18rem,calc(100vw-2rem))]"
+            >
+              <UiSketchToast
+                message="Clear the whole drawing?"
+                tone="alert"
+                confirm-label="Clear"
+                :auto-dismiss-ms="0"
+                @confirm="confirmClear"
+                @dismiss="cancelClear"
+              />
+            </div>
+          </div>
           <div
             class="mx-0.5 h-8 w-px shrink-0 bg-slate-300/80"
             aria-hidden="true"

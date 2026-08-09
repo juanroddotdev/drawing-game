@@ -50,6 +50,12 @@ if (!showDevTools.value) {
           Canvas lab
         </NuxtLink>
         <NuxtLink
+          to="/lab/screens"
+          class="rounded-2xl border border-slate-600 px-4 py-3 text-center text-sm font-semibold text-slate-200"
+        >
+          Screen lab
+        </NuxtLink>
+        <NuxtLink
           to="/"
           class="text-center text-sm text-slate-500 underline-offset-2 hover:underline"
         >

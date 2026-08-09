@@ -70,46 +70,57 @@ async function startChain() {
 </script>
 
 <template>
-  <main class="flex min-h-dvh flex-col bg-gradient-to-b from-slate-100 to-slate-200 text-slate-900">
-    <div class="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pt-4">
-      <header class="mb-3 flex items-center justify-between gap-2">
-        <NuxtLink
-          to="/"
-          class="text-sm font-medium text-slate-500 hover:text-slate-800"
+  <main class="relative mx-auto flex h-dvh max-w-lg flex-col bg-slate-200 text-slate-900">
+    <!-- Floating chrome — only real controls capture clicks -->
+    <div class="pointer-events-none absolute inset-x-0 top-0 z-20 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <NuxtLink
+        to="/"
+        class="pointer-events-auto absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/90 text-slate-700 shadow-md backdrop-blur-md"
+        aria-label="Home"
+        title="Home"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          class="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
         >
-          ← Home
-        </NuxtLink>
-        <span class="text-sm font-semibold text-slate-700">Start a loop</span>
-      </header>
-
-      <UiPhoneTip class="mb-3" />
-
-      <div class="mb-3">
-        <ChainPromptBuilder v-model="prompt" />
+          <path d="m3 10 9-7 9 7" />
+          <path d="M5 10v9a1 1 0 0 0 1 1h4v-5h4v5h4a1 1 0 0 0 1-1v-9" />
+        </svg>
+      </NuxtLink>
+      <div class="mx-auto flex justify-center px-12">
+        <div class="pointer-events-auto">
+          <ChainPromptBuilder v-model="prompt" />
+        </div>
       </div>
-
-      <div class="min-h-0 flex-1">
-        <CanvasDrawingCanvas v-model="drawing" />
-      </div>
-
-      <p
-        v-if="error"
-        class="mt-2 text-sm text-red-600"
-      >
-        {{ error }}
-      </p>
     </div>
 
-    <div class="mx-auto w-full max-w-lg px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
-      <button
-        type="button"
-        class="w-full rounded-2xl bg-slate-900 px-4 py-4 text-base font-semibold text-white disabled:opacity-50"
-        :disabled="busy"
-        @click="openSubmit"
-      >
-        Done
-      </button>
+    <div class="min-h-0 flex-1">
+      <CanvasDrawingCanvas v-model="drawing">
+        <template #action>
+          <button
+            type="button"
+            class="flex h-10 items-center rounded-full bg-slate-950 px-4 text-sm font-semibold text-white shadow-md disabled:opacity-50"
+            :disabled="busy"
+            @click="openSubmit"
+          >
+            Done
+          </button>
+        </template>
+      </CanvasDrawingCanvas>
     </div>
+
+    <p
+      v-if="error"
+      class="absolute inset-x-4 top-[4.5rem] z-30 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 shadow"
+    >
+      {{ error }}
+    </p>
 
     <UiPlayerSubmitSheet
       v-model:open="sheetOpen"

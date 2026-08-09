@@ -54,6 +54,7 @@ const drawing = ref(false)
 const sizing = ref(false)
 let cssSize = 300
 let dpr = 1
+let resizeObserver: ResizeObserver | null = null
 
 const sizePreviewPx = computed(() => Math.max(6, width.value * Math.min(cssSize, 360)))
 
@@ -134,7 +135,6 @@ function setWidthFromClientY(clientY: number) {
   if (!el) return
   const rect = el.getBoundingClientRect()
   if (rect.height <= 0) return
-  // Top = thick, bottom = thin (Instagram-like)
   const t = Math.min(1, Math.max(0, (clientY - rect.top) / rect.height))
   width.value = BRUSH_WIDTH_MAX - t * (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)
 }
@@ -174,118 +174,180 @@ function requestClear() {
 onMounted(() => {
   syncCanvasSize()
   window.addEventListener('resize', syncCanvasSize)
+  if (wrapRef.value && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => syncCanvasSize())
+    resizeObserver.observe(wrapRef.value)
+  }
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', syncCanvasSize)
+  resizeObserver?.disconnect()
 })
 
 defineExpose({ clear, undo, canUndo, syncCanvasSize })
 </script>
 
 <template>
-  <div class="flex w-full flex-col gap-2">
-    <!-- Top tools -->
-    <div class="flex items-center justify-between gap-2 px-1">
-      <button
-        type="button"
-        class="flex h-11 min-w-11 items-center justify-center rounded-full border border-slate-300 bg-white text-sm font-semibold text-slate-800 disabled:opacity-40"
-        :disabled="disabled || !canUndo"
-        aria-label="Undo"
-        @click="undo"
-      >
-        Undo
-      </button>
-      <div class="flex items-center gap-2">
-        <button
-          type="button"
-          class="flex h-11 min-w-11 items-center justify-center rounded-full border px-3 text-sm font-semibold"
-          :class="tool === 'eraser'
-            ? 'border-slate-900 bg-slate-900 text-white'
-            : 'border-slate-300 bg-white text-slate-800'"
-          :disabled="disabled"
-          @click="tool = tool === 'eraser' ? 'pen' : 'eraser'"
-        >
-          Eraser
-        </button>
-        <button
-          type="button"
-          class="flex h-11 min-w-11 items-center justify-center rounded-full border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800"
-          :disabled="disabled"
-          @click="requestClear"
-        >
-          Clear
-        </button>
-      </div>
-    </div>
+  <div class="relative h-full min-h-[16rem] w-full">
+    <div
+      ref="wrapRef"
+      class="relative mx-auto h-full w-full max-w-[100dvh] overflow-hidden bg-slate-50 sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-sm"
+    >
+      <canvas
+        ref="canvasRef"
+        class="absolute inset-0 m-auto block touch-none select-none"
+        style="touch-action: none; -webkit-user-select: none; -webkit-touch-callout: none;"
+        :class="disabled ? 'pointer-events-none opacity-70' : 'cursor-crosshair'"
+        @pointerdown="onPointerDown"
+        @pointermove="onPointerMove"
+        @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
+        @contextmenu="onContextMenu"
+      />
 
-    <!-- Canvas + left size slider -->
-    <div class="relative w-full">
+      <!-- Primary action (Done) — Instagram-style top right -->
       <div
-        ref="wrapRef"
-        class="relative mx-auto aspect-square w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm"
+        v-if="$slots.action"
+        class="pointer-events-none absolute right-2 top-14 z-20 sm:top-3"
       >
-        <canvas
-          ref="canvasRef"
-          class="absolute inset-0 m-auto block touch-none select-none"
-          style="touch-action: none; -webkit-user-select: none; -webkit-touch-callout: none;"
-          :class="disabled ? 'pointer-events-none opacity-70' : 'cursor-crosshair'"
-          @pointerdown="onPointerDown"
-          @pointermove="onPointerMove"
-          @pointerup="onPointerUp"
-          @pointercancel="onPointerUp"
-          @contextmenu="onContextMenu"
-        />
-
-        <!-- Vertical size slider -->
         <div
-          class="absolute left-2 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center"
+          class="pointer-events-auto"
+          @pointerdown.stop
         >
-          <div
-            v-if="sizing"
-            class="pointer-events-none absolute bottom-full mb-3 rounded-full border-2 border-slate-900/80 bg-white/90 shadow"
-            :style="{ width: `${sizePreviewPx}px`, height: `${sizePreviewPx}px` }"
-          />
-          <div
-            ref="sliderRef"
-            class="flex h-40 w-11 touch-none items-center justify-center"
-            style="touch-action: none"
-            @pointerdown="onSliderPointerDown"
-            @pointermove="onSliderPointerMove"
-            @pointerup="onSliderPointerUp"
-            @pointercancel="onSliderPointerUp"
-          >
-            <div class="relative h-full w-1.5 rounded-full bg-slate-300">
-              <div
-                class="absolute left-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-slate-900 bg-white shadow"
-                :style="{
-                  top: `${((BRUSH_WIDTH_MAX - width) / (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)) * 100}%`,
-                }"
-              />
-            </div>
+          <slot name="action" />
+        </div>
+      </div>
+
+      <!-- Left size slider -->
+      <div class="absolute left-1 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center">
+        <div
+          v-if="sizing"
+          class="pointer-events-none absolute bottom-full mb-3 rounded-full border-2 border-slate-900/80 bg-white/90 shadow"
+          :style="{ width: `${sizePreviewPx}px`, height: `${sizePreviewPx}px` }"
+        />
+        <div
+          ref="sliderRef"
+          class="flex h-44 w-11 touch-none items-center justify-center"
+          style="touch-action: none"
+          @pointerdown="onSliderPointerDown"
+          @pointermove="onSliderPointerMove"
+          @pointerup="onSliderPointerUp"
+          @pointercancel="onSliderPointerUp"
+        >
+          <div class="relative h-full w-1.5 rounded-full bg-white/70 shadow-sm ring-1 ring-slate-300/60">
+            <div
+              class="absolute left-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-slate-900 bg-white shadow"
+              :style="{
+                top: `${((BRUSH_WIDTH_MAX - width) / (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)) * 100}%`,
+              }"
+            />
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Bottom color dock -->
-    <div
-      class="flex gap-2 overflow-x-auto px-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1"
-      style="-webkit-overflow-scrolling: touch"
-    >
-      <button
-        v-for="c in colors"
-        :key="c"
-        type="button"
-        class="h-11 w-11 shrink-0 rounded-full border-2 transition"
-        :class="color === c && tool === 'pen'
-          ? 'border-slate-900 scale-105'
-          : 'border-slate-300'"
-        :style="{ backgroundColor: c }"
-        :aria-label="`Color ${c}`"
-        :disabled="disabled"
-        @click="tool = 'pen'; color = c"
-      />
+      <!-- Bottom thumb dock: Undo · Eraser · Clear · swatches -->
+      <div
+        class="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-slate-900/25 via-slate-900/10 to-transparent px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-8"
+      >
+        <div
+          class="pointer-events-auto flex w-full items-center gap-1.5 overflow-x-auto rounded-2xl border border-white/70 bg-white/85 p-1.5 shadow-md backdrop-blur-md"
+          style="-webkit-overflow-scrolling: touch"
+        >
+          <button
+            type="button"
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-800 disabled:opacity-35"
+            :disabled="disabled || !canUndo"
+            aria-label="Undo last stroke"
+            title="Undo"
+            @pointerdown.stop
+            @click="undo"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M9 14 4 9l5-5" />
+              <path d="M4 9h10a6 6 0 0 1 0 12h-3" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+            :class="tool === 'eraser'
+              ? 'bg-slate-900 text-white'
+              : 'text-slate-800'"
+            :disabled="disabled"
+            aria-label="Eraser"
+            title="Eraser"
+            @pointerdown.stop
+            @click="tool = tool === 'eraser' ? 'pen' : 'eraser'"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
+              <path d="M22 21H7" />
+              <path d="m5 11 9 9" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500"
+            :disabled="disabled"
+            aria-label="Clear drawing"
+            title="Clear"
+            @pointerdown.stop
+            @click="requestClear"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 6h18" />
+              <path d="M8 6V4h8v2" />
+              <path d="m19 6-1 14H6L5 6" />
+            </svg>
+          </button>
+          <div
+            class="mx-0.5 h-8 w-px shrink-0 bg-slate-300/80"
+            aria-hidden="true"
+          />
+          <button
+            v-for="c in colors"
+            :key="c"
+            type="button"
+            class="h-10 w-10 shrink-0 rounded-full border-2 transition"
+            :class="color === c && tool === 'pen'
+              ? 'border-slate-900 scale-105'
+              : 'border-white shadow-sm'"
+            :style="{ backgroundColor: c }"
+            :aria-label="`Color ${c}`"
+            :disabled="disabled"
+            @pointerdown.stop
+            @click="tool = 'pen'; color = c"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>

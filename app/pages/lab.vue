@@ -57,7 +57,9 @@ function reRenderFromJson() {
           <h2 class="text-lg font-semibold">
             Draw
           </h2>
-          <CanvasDrawingCanvas v-model="drawing" />
+          <div class="h-[min(100vw,28rem)] max-w-lg">
+            <CanvasDrawingCanvas v-model="drawing" />
+          </div>
           <p class="text-sm text-slate-500">
             {{ drawing.strokes.length }} stroke{{ drawing.strokes.length === 1 ? '' : 's' }}
           </p>

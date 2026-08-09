@@ -52,7 +52,7 @@ onBeforeUnmount(clearTimer)
     <div
       v-if="message"
       role="status"
-      class="sketch-toast pointer-events-auto mx-auto max-w-[min(100%,20rem)] border border-[var(--ink)] px-3 py-2.5 text-sm font-semibold leading-snug text-[var(--ink)] shadow-block"
+      class="sketch-toast pointer-events-auto w-full max-w-[min(100%,20rem)] border border-[var(--ink)] px-3 py-2.5 text-sm font-semibold leading-snug text-[var(--ink)] shadow-block"
       :class="tone === 'alert' ? 'bg-[var(--toast-alert)]' : 'bg-[var(--toast-note)]'"
     >
       <p>{{ message }}</p>

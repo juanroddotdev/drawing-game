@@ -61,7 +61,6 @@ let resizeObserver: ResizeObserver | null = null
 
 const sizePreviewPx = computed(() => Math.max(6, width.value * Math.min(cssSize, 360)))
 const sizeThumbColor = computed(() => (tool.value === 'eraser' ? '#e2e8f0' : color.value))
-const sizeTrackAccent = computed(() => (tool.value === 'eraser' ? 'var(--ink)' : color.value))
 
 /** Dark fills need a light edge so they don't melt into the hard ink shadow. */
 function isDarkFill(hex: string): boolean {
@@ -70,7 +69,6 @@ function isDarkFill(hex: string): boolean {
   const r = Number.parseInt(h.slice(0, 2), 16)
   const g = Number.parseInt(h.slice(2, 4), 16)
   const b = Number.parseInt(h.slice(4, 6), 16)
-  // Relative luminance (sRGB)
   const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
   return lum < 0.35
 }
@@ -292,12 +290,10 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
       <div class="absolute left-1 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center">
         <div
           v-if="sizing"
-          class="pointer-events-none absolute bottom-full mb-3 rounded-full border-2 border-[var(--ink)]"
+          class="pointer-events-none absolute bottom-full mb-3 rounded-full border-2 border-[var(--ink)] bg-transparent"
           :style="{
             width: `${sizePreviewPx}px`,
             height: `${sizePreviewPx}px`,
-            backgroundColor: sizeThumbColor,
-            boxShadow: sizeThumbStyle.boxShadow,
           }"
         />
         <div
@@ -309,10 +305,7 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
           @pointerup="onSliderPointerUp"
           @pointercancel="onSliderPointerUp"
         >
-          <div
-            class="relative h-full w-1.5 rounded-full bg-[var(--surface)]"
-            :style="{ outline: `2px solid ${sizeTrackAccent}` }"
-          >
+          <div class="relative h-full w-1.5 rounded-full bg-[var(--surface)] ring-2 ring-[var(--ink)]">
             <div
               class="absolute left-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--ink)]"
               :style="{

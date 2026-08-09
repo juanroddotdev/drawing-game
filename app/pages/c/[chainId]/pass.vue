@@ -19,13 +19,13 @@ useHead({ title: 'Pass the link — DoodleLoop' })
 </script>
 
 <template>
-  <main class="min-h-dvh bg-gradient-to-b from-slate-100 to-slate-200 px-4 py-8 text-slate-900">
+  <main class="bg-dot-grid min-h-dvh px-4 py-8 text-[var(--ink)]">
     <div class="mx-auto flex max-w-lg flex-col gap-5">
       <header class="space-y-1">
-        <h1 class="text-xl font-bold tracking-tight">
+        <h1 class="font-sketch text-3xl font-bold tracking-tight">
           Pass it on
         </h1>
-        <p class="text-sm text-slate-600">
+        <p class="text-sm font-medium text-[var(--ink-muted)]">
           <span v-if="you">Nice, {{ you }}. </span>
           Share so someone can play {{ stepLabel }}.
         </p>

@@ -15,19 +15,19 @@ const mailHref = computed(() => mailtoShare(props.url, props.stepLabel))
   <div class="space-y-4">
     <button
       type="button"
-      class="flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-4 text-base font-semibold text-white shadow-sm"
+      class="btn-ink w-full !rounded-2xl !py-4"
       @click="shareOrCopy({ title: 'DoodleLoop — your turn', text: `You're up for ${stepLabel}`, url })"
     >
       {{ canNativeShare ? 'Share turn' : 'Copy link to share' }}
     </button>
 
-    <div class="flex items-start gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-      <p class="min-w-0 flex-1 break-all font-mono text-xs leading-relaxed text-slate-700">
+    <div class="chip-sketch flex items-start gap-2 rounded-2xl p-3">
+      <p class="min-w-0 flex-1 break-all font-mono text-xs leading-relaxed text-[var(--ink)]">
         {{ url || '…' }}
       </p>
       <button
         type="button"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 text-xs font-semibold text-slate-800"
+        class="chip-sketch flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xs font-bold text-[var(--ink)]"
         aria-label="Copy link"
         @click="copyText(url)"
       >

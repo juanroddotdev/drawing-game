@@ -35,7 +35,7 @@ onBeforeUnmount(() => {
     <div class="relative">
       <button
         type="button"
-        class="flex h-11 w-11 items-center justify-center rounded-full bg-transparent text-slate-500 transition hover:text-slate-800"
+        class="chip-sketch flex h-11 w-11 items-center justify-center rounded-full text-[var(--ink)] transition hover:bg-[var(--paper)]"
         :aria-expanded="open"
         aria-haspopup="menu"
         aria-label="More options"
@@ -46,7 +46,7 @@ onBeforeUnmount(() => {
           class="h-5 w-5"
           fill="none"
           stroke="currentColor"
-          stroke-width="1.75"
+          stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
           aria-hidden="true"
@@ -63,7 +63,7 @@ onBeforeUnmount(() => {
       <div
         v-if="open"
         role="menu"
-        class="absolute bottom-full right-0 z-20 mb-2 min-w-[11rem] overflow-hidden rounded-2xl border border-slate-200 bg-white py-1 shadow-lg"
+        class="panel-sketch absolute bottom-full right-0 z-20 mb-2 min-w-[11rem] overflow-hidden py-1"
       >
         <NuxtLink
           to="/lab"

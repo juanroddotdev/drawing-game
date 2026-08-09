@@ -192,7 +192,7 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
   <div class="relative h-full min-h-[16rem] w-full">
     <div
       ref="wrapRef"
-      class="relative mx-auto h-full w-full max-w-[100dvh] overflow-hidden bg-slate-50 sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-sm"
+      class="relative mx-auto h-full w-full max-w-[100dvh] overflow-hidden bg-[var(--canvas)] sm:rounded-2xl sm:border-2 sm:border-[var(--ink)] sm:shadow-block"
     >
       <canvas
         ref="canvasRef"
@@ -235,9 +235,9 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
           @pointerup="onSliderPointerUp"
           @pointercancel="onSliderPointerUp"
         >
-          <div class="relative h-full w-1.5 rounded-full bg-white/70 shadow-sm ring-1 ring-slate-300/60">
+          <div class="relative h-full w-1.5 rounded-full bg-[var(--surface)] ring-2 ring-[var(--ink)]">
             <div
-              class="absolute left-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-slate-900 bg-white shadow"
+              class="absolute left-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--ink)] bg-[var(--accent)] shadow-block"
               :style="{
                 top: `${((BRUSH_WIDTH_MAX - width) / (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)) * 100}%`,
               }"
@@ -248,10 +248,10 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
 
       <!-- Bottom thumb dock: Undo · Eraser · Clear · swatches -->
       <div
-        class="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-slate-900/25 via-slate-900/10 to-transparent px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-8"
+        class="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[var(--paper-deep)]/80 via-transparent to-transparent px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-8"
       >
         <div
-          class="pointer-events-auto flex w-full items-center gap-1.5 overflow-x-auto rounded-2xl border border-white/70 bg-white/85 p-1.5 shadow-md backdrop-blur-md"
+          class="dock-sketch pointer-events-auto flex w-full items-center gap-1.5 overflow-x-auto p-1.5"
           style="-webkit-overflow-scrolling: touch"
         >
           <button
@@ -281,8 +281,8 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
             type="button"
             class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
             :class="tool === 'eraser'
-              ? 'bg-slate-900 text-white'
-              : 'text-slate-800'"
+              ? 'bg-[var(--ink)] text-white'
+              : 'text-[var(--ink)]'"
             :disabled="disabled"
             aria-label="Eraser"
             title="Eraser"
@@ -338,8 +338,8 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
             type="button"
             class="h-10 w-10 shrink-0 rounded-full border-2 transition"
             :class="color === c && tool === 'pen'
-              ? 'border-slate-900 scale-105'
-              : 'border-white shadow-sm'"
+              ? 'border-[var(--ink)] scale-105 shadow-block'
+              : 'border-[var(--ink)]/30'"
             :style="{ backgroundColor: c }"
             :aria-label="`Color ${c}`"
             :disabled="disabled"

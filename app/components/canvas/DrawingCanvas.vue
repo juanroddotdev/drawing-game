@@ -50,9 +50,11 @@ watch(
 const wrapRef = ref<HTMLElement | null>(null)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const sliderRef = ref<HTMLElement | null>(null)
+const clearBtnRef = ref<HTMLButtonElement | null>(null)
 const drawing = ref(false)
 const sizing = ref(false)
 const clearPromptOpen = ref(false)
+const clearToastStyle = ref<Record<string, string>>({})
 let cssSize = 300
 let dpr = 1
 let resizeObserver: ResizeObserver | null = null
@@ -164,10 +166,23 @@ function onSliderPointerUp(e: PointerEvent) {
   }
 }
 
+function positionClearToast() {
+  const wrap = wrapRef.value
+  const btn = clearBtnRef.value
+  if (!wrap || !btn) return
+  const wr = wrap.getBoundingClientRect()
+  const br = btn.getBoundingClientRect()
+  clearToastStyle.value = {
+    left: `${Math.max(8, Math.min(br.left - wr.left, wr.width - 16))}px`,
+    bottom: `${Math.max(8, wr.bottom - br.top + 8)}px`,
+  }
+}
+
 function requestClear() {
   if (props.disabled) return
   if (document.value.strokes.length === 0) return
   clearPromptOpen.value = true
+  nextTick(positionClearToast)
 }
 
 function confirmClear() {
@@ -224,6 +239,27 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
           @pointerdown.stop
         >
           <slot name="action" />
+        </div>
+      </div>
+
+      <!-- Clear confirm — outside dock overflow so it isn't clipped -->
+      <div
+        v-if="clearPromptOpen"
+        class="pointer-events-none absolute z-40 w-[min(18rem,calc(100%-1.5rem))] -translate-x-0"
+        :style="clearToastStyle"
+      >
+        <div
+          class="pointer-events-auto"
+          @pointerdown.stop
+        >
+          <UiSketchToast
+            message="Clear the whole drawing?"
+            tone="alert"
+            confirm-label="Clear"
+            :auto-dismiss-ms="0"
+            @confirm="confirmClear"
+            @dismiss="cancelClear"
+          />
         </div>
       </div>
 
@@ -312,46 +348,31 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
               <path d="m5 11 9 9" />
             </svg>
           </button>
-          <div class="relative shrink-0">
-            <button
-              type="button"
-              class="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500"
-              :disabled="disabled"
-              aria-label="Clear drawing"
-              title="Clear"
-              @pointerdown.stop
-              @click="requestClear"
+          <button
+            ref="clearBtnRef"
+            type="button"
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500"
+            :disabled="disabled"
+            aria-label="Clear drawing"
+            title="Clear"
+            @pointerdown.stop
+            @click="requestClear"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              <svg
-                viewBox="0 0 24 24"
-                class="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M3 6h18" />
-                <path d="M8 6V4h8v2" />
-                <path d="m19 6-1 14H6L5 6" />
-              </svg>
-            </button>
-            <!-- Confirm anchored above Clear -->
-            <div
-              v-if="clearPromptOpen"
-              class="absolute bottom-full left-0 z-30 mb-2 w-[min(18rem,calc(100vw-2rem))]"
-            >
-              <UiSketchToast
-                message="Clear the whole drawing?"
-                tone="alert"
-                confirm-label="Clear"
-                :auto-dismiss-ms="0"
-                @confirm="confirmClear"
-                @dismiss="cancelClear"
-              />
-            </div>
-          </div>
+              <path d="M3 6h18" />
+              <path d="M8 6V4h8v2" />
+              <path d="m19 6-1 14H6L5 6" />
+            </svg>
+          </button>
           <div
             class="mx-0.5 h-8 w-px shrink-0 bg-slate-300/80"
             aria-hidden="true"

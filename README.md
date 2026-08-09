@@ -6,6 +6,7 @@ Async friends-first Telestrations-style drawing game. Stack: **Nuxt + Supabase**
 
 - [Base idea](./docs/base-idea-v3.md)
 - [Architecture](./docs/architecture.md)
+- [Design system](./docs/design-system.md) (Clean Neo-Brutal + Sketch)
 - [Open questions](./docs/open-questions.md)
 - [Build prompt](./docs/build-prompt.md)
 

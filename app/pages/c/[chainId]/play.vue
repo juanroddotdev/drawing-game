@@ -166,12 +166,12 @@ onMounted(load)
   <!-- Draw: full-bleed canvas shell -->
   <main
     v-if="payload && payload.step_type === 'draw' && !expired && !loadError"
-    class="relative mx-auto flex h-dvh max-w-lg flex-col bg-slate-200 text-slate-900"
+    class="bg-dot-grid relative mx-auto flex h-dvh max-w-lg flex-col text-[var(--ink)]"
   >
     <div class="pointer-events-none absolute inset-x-0 top-0 z-20 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
       <NuxtLink
         :to="`/c/${slug}`"
-        class="pointer-events-auto absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-white/90 text-slate-700 shadow-md backdrop-blur-md"
+        class="chip-sketch pointer-events-auto absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-xl text-[var(--ink)]"
         aria-label="Chain status"
         title="Chain status"
       >
@@ -180,7 +180,7 @@ onMounted(load)
           class="h-5 w-5"
           fill="none"
           stroke="currentColor"
-          stroke-width="2"
+          stroke-width="2.25"
           stroke-linecap="round"
           stroke-linejoin="round"
           aria-hidden="true"
@@ -205,7 +205,7 @@ onMounted(load)
 
     <p
       v-if="payload"
-      class="pointer-events-none absolute inset-x-0 top-[3.25rem] z-10 text-center text-[11px] font-medium text-slate-500"
+      class="pointer-events-none absolute inset-x-0 top-[3.25rem] z-10 text-center text-[11px] font-bold text-[var(--ink-muted)]"
     >
       Step {{ payload.step_number }} of {{ payload.max_steps }}
     </p>
@@ -215,7 +215,7 @@ onMounted(load)
         <template #action>
           <button
             type="button"
-            class="flex h-10 items-center rounded-full bg-slate-950 px-4 text-sm font-semibold text-white shadow-md disabled:opacity-50"
+            class="btn-accent !px-4 !py-2 text-sm"
             :disabled="busy"
             @click="openSubmit"
           >

@@ -4,28 +4,27 @@
 
 <template>
   <div
-    class="chaos-preview overflow-hidden rounded-3xl border border-slate-200/80 bg-white/70 px-4 py-5 shadow-sm backdrop-blur-sm"
+    class="panel-sketch chaos-preview px-4 py-5"
     aria-label="Example round: prompt, drawing, wrong guess"
   >
     <ol class="grid gap-4 sm:grid-cols-3 sm:gap-3">
       <li class="chaos-beat chaos-beat-1 flex flex-col gap-2">
-        <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
           Prompt
         </span>
-        <p class="rounded-2xl bg-slate-900 px-3 py-3 text-sm font-semibold leading-snug text-white">
+        <p class="rounded-lg border border-[var(--ink)] bg-[var(--ink)] px-3 py-3 text-sm font-semibold leading-snug text-white">
           Cat on a skateboard
         </p>
       </li>
 
       <li class="chaos-beat chaos-beat-2 flex flex-col gap-2">
-        <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
           Drawing
         </span>
-        <div class="relative flex aspect-square items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-[radial-gradient(circle_at_30%_20%,#f8fafc,transparent_55%),linear-gradient(180deg,#f1f5f9,#e2e8f0)]">
-          <!-- Simple ink doodle (SVG) -->
+        <div class="relative flex aspect-square items-center justify-center rounded-lg border border-dashed border-[var(--ink)] bg-[var(--canvas)]">
           <svg
             viewBox="0 0 120 120"
-            class="h-[72%] w-[72%] text-slate-900"
+            class="h-[72%] w-[72%] text-[var(--ink)]"
             fill="none"
             stroke="currentColor"
             stroke-width="3"
@@ -70,17 +69,17 @@
             />
             <path d="M48 88 L72 88" />
           </svg>
-          <span class="pointer-events-none absolute bottom-2 right-2 rotate-[-6deg] rounded bg-[#d9f99d] px-1.5 py-0.5 text-[10px] font-bold text-slate-900">
+          <span class="pointer-events-none absolute bottom-2 right-2 border border-[var(--ink)] bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--ink)] shadow-block">
             ink
           </span>
         </div>
       </li>
 
       <li class="chaos-beat chaos-beat-3 flex flex-col gap-2">
-        <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
           Guess
         </span>
-        <p class="rounded-2xl border-2 border-[#d9f99d] bg-[#ecfccb] px-3 py-3 text-sm font-semibold leading-snug text-slate-900">
+        <p class="rounded-lg border border-[var(--ink)] bg-[var(--accent)] px-3 py-3 text-sm font-semibold leading-snug text-[var(--ink)] shadow-block">
           Hairy potato on wheels
         </p>
       </li>

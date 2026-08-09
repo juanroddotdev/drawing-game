@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * DoodleLoop — restrained neo-brutal sketch
+ * Playful peak snapshot: git commit 5070557
+ * Living reference: docs/design-system.md
+ */
+:root {
+  --ink: #0f172a;
+  --ink-muted: #64748b;
+  --paper: #eef2f6;
+  --paper-deep: #e2e8f0;
+  --surface: #ffffff;
+  --canvas: #f8fafc;
+  --accent: #84cc16;
+  --accent-deep: #65a30d;
+  --accent-ink: #3f6212;
+  --danger: #dc2626;
+  --font-ui: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sketch: "Shantell Sans", "Comic Sans MS", cursive;
+  --radius-chip: 0.75rem;
+  --radius-panel: 0.75rem;
+  --shadow-offset: 2px;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-ui);
+    color: var(--ink);
+  }
+}
+
+@layer components {
+  .bg-dot-grid {
+    background-color: var(--paper);
+    background-image: radial-gradient(rgba(15, 23, 42, 0.07) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+
+  .shadow-block {
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
+  }
+
+  .shadow-block-lg {
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+
+  .font-sketch {
+    font-family: var(--font-sketch);
+  }
+
+  .font-ui {
+    font-family: var(--font-ui);
+  }
+
+  /* Primary CTA */
+  .btn-ink {
+    @apply inline-flex items-center justify-center border border-[var(--ink)] bg-[var(--ink)] px-5 py-3 text-base font-bold text-white transition;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
+    border-radius: var(--radius-chip);
+  }
+
+  .btn-ink:hover {
+    background-color: #1e293b;
+  }
+
+  .btn-ink:disabled {
+    @apply opacity-50;
+  }
+
+  /* Accent CTA — reads against ink shadow */
+  .btn-accent {
+    @apply inline-flex items-center justify-center border border-[var(--ink)] bg-[var(--accent)] px-5 py-3 text-base font-bold text-[var(--ink)] transition;
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
+    border-radius: var(--radius-chip);
+  }
+
+  .btn-accent:hover {
+    background-color: var(--accent-deep);
+  }
+
+  .btn-accent:disabled {
+    @apply opacity-50;
+  }
+
+  .chip-sketch {
+    @apply border border-[var(--ink)] bg-[var(--surface)];
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
+  }
+
+  .panel-sketch {
+    @apply border border-[var(--ink)] bg-[var(--surface)];
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
+    border-radius: var(--radius-panel);
+  }
+
+  .dock-sketch {
+    @apply border border-[var(--ink)] bg-[var(--surface)];
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
+    border-radius: var(--radius-panel);
+  }
+}

@@ -72,14 +72,14 @@ function reRenderFromJson() {
           <div class="flex flex-wrap gap-2">
             <button
               type="button"
-              class="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white"
+              class="btn-ink !px-3 !py-2 text-sm"
               @click="exportJson"
             >
               Export JSON
             </button>
             <button
               type="button"
-              class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium"
+              class="btn-quiet !px-3 !py-2 text-sm"
               @click="reRenderFromJson"
             >
               Re-render from JSON

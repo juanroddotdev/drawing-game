@@ -45,7 +45,7 @@ const mailHref = computed(() => mailtoShare(props.url, props.stepLabel))
     <div>
       <button
         type="button"
-        class="text-sm font-semibold text-slate-600 underline-offset-2 hover:underline"
+        class="btn-quiet !px-0 !py-1 text-sm"
         @click="moreOpen = !moreOpen"
       >
         {{ moreOpen ? 'Hide more' : 'More' }}

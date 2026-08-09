@@ -87,6 +87,21 @@
     @apply opacity-50;
   }
 
+  /* Tertiary — low emphasis dismiss / secondary text action */
+  .btn-quiet {
+    @apply inline-flex items-center justify-center px-4 py-3 text-base font-bold text-[var(--ink-muted)] transition;
+    border-radius: var(--radius-chip);
+  }
+
+  .btn-quiet:hover {
+    color: var(--ink);
+    background-color: var(--paper-deep);
+  }
+
+  .btn-quiet:disabled {
+    @apply opacity-50;
+  }
+
   .chip-sketch {
     @apply border border-[var(--ink)] bg-[var(--surface)];
     box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);

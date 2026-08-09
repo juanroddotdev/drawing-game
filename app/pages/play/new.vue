@@ -140,6 +140,7 @@ async function startChain() {
       title="Submit your drawing"
       confirm-label="Create & share"
       :busy="busy"
+      :preview="drawing"
       @confirm="startChain"
     />
   </main>

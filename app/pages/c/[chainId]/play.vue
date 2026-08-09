@@ -250,6 +250,7 @@ onMounted(load)
       title="Submit your drawing"
       confirm-label="Submit drawing"
       :busy="busy"
+      :preview="drawing"
       @confirm="submit"
     />
   </main>

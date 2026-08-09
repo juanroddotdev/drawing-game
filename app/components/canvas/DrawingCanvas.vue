@@ -63,6 +63,29 @@ const sizePreviewPx = computed(() => Math.max(6, width.value * Math.min(cssSize,
 const sizeThumbColor = computed(() => (tool.value === 'eraser' ? '#e2e8f0' : color.value))
 const sizeTrackAccent = computed(() => (tool.value === 'eraser' ? 'var(--ink)' : color.value))
 
+/** Dark fills need a light edge so they don't melt into the hard ink shadow. */
+function isDarkFill(hex: string): boolean {
+  const h = hex.replace('#', '')
+  if (h.length !== 6) return hex === '#111827' || hex === '#000000'
+  const r = Number.parseInt(h.slice(0, 2), 16)
+  const g = Number.parseInt(h.slice(2, 4), 16)
+  const b = Number.parseInt(h.slice(4, 6), 16)
+  // Relative luminance (sRGB)
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+  return lum < 0.35
+}
+
+const sizeThumbStyle = computed(() => {
+  const bg = sizeThumbColor.value
+  const dark = tool.value !== 'eraser' && isDarkFill(bg)
+  return {
+    backgroundColor: bg,
+    boxShadow: dark
+      ? '0 0 0 1.5px #fff, 2px 2px 0 var(--ink)'
+      : '2px 2px 0 var(--ink)',
+  }
+})
+
 function syncCanvasSize() {
   const wrap = wrapRef.value
   const canvas = canvasRef.value
@@ -266,51 +289,15 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
       </div>
 
       <!-- Left size slider -->
-      <div class="absolute left-1 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-1.5">
-        <div
-          class="pointer-events-none flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--ink)] bg-[var(--surface)] text-[var(--ink)] shadow-block"
-          :aria-label="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
-          :title="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
-        >
-          <!-- Pen tip -->
-          <svg
-            v-if="tool !== 'eraser'"
-            viewBox="0 0 24 24"
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
-            <path d="m5 12 4 4" />
-          </svg>
-          <!-- Eraser -->
-          <svg
-            v-else
-            viewBox="0 0 24 24"
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
-            <path d="M22 21H7" />
-            <path d="m5 11 9 9" />
-          </svg>
-        </div>
+      <div class="absolute left-1 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center">
         <div
           v-if="sizing"
-          class="pointer-events-none absolute bottom-[calc(100%-0.25rem)] mb-1 rounded-full border-2 border-[var(--ink)] shadow-block"
+          class="pointer-events-none absolute bottom-full mb-3 rounded-full border-2 border-[var(--ink)]"
           :style="{
             width: `${sizePreviewPx}px`,
             height: `${sizePreviewPx}px`,
             backgroundColor: sizeThumbColor,
+            boxShadow: sizeThumbStyle.boxShadow,
           }"
         />
         <div
@@ -327,13 +314,50 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
             :style="{ outline: `2px solid ${sizeTrackAccent}` }"
           >
             <div
-              class="absolute left-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--ink)] shadow-block"
+              class="absolute left-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--ink)]"
               :style="{
                 top: `${((BRUSH_WIDTH_MAX - width) / (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)) * 100}%`,
-                backgroundColor: sizeThumbColor,
+                backgroundColor: sizeThumbStyle.backgroundColor,
+                boxShadow: sizeThumbStyle.boxShadow,
               }"
             />
           </div>
+        </div>
+        <!-- Tool cue under track (icon only) -->
+        <div
+          class="pointer-events-none mt-1.5 text-[var(--ink)]"
+          :aria-label="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
+          :title="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
+        >
+          <svg
+            v-if="tool !== 'eraser'"
+            viewBox="0 0 24 24"
+            class="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.25"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
+            <path d="m5 12 4 4" />
+          </svg>
+          <svg
+            v-else
+            viewBox="0 0 24 24"
+            class="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.25"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
+            <path d="M22 21H7" />
+            <path d="m5 11 9 9" />
+          </svg>
         </div>
       </div>
 

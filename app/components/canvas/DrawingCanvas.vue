@@ -60,6 +60,8 @@ let dpr = 1
 let resizeObserver: ResizeObserver | null = null
 
 const sizePreviewPx = computed(() => Math.max(6, width.value * Math.min(cssSize, 360)))
+const sizeThumbColor = computed(() => (tool.value === 'eraser' ? '#e2e8f0' : color.value))
+const sizeTrackAccent = computed(() => (tool.value === 'eraser' ? 'var(--ink)' : color.value))
 
 function syncCanvasSize() {
   const wrap = wrapRef.value
@@ -264,11 +266,52 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
       </div>
 
       <!-- Left size slider -->
-      <div class="absolute left-1 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center">
+      <div class="absolute left-1 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-1.5">
+        <div
+          class="pointer-events-none flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--ink)] bg-[var(--surface)] text-[var(--ink)] shadow-block"
+          :aria-label="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
+          :title="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
+        >
+          <!-- Pen tip -->
+          <svg
+            v-if="tool !== 'eraser'"
+            viewBox="0 0 24 24"
+            class="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
+            <path d="m5 12 4 4" />
+          </svg>
+          <!-- Eraser -->
+          <svg
+            v-else
+            viewBox="0 0 24 24"
+            class="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
+            <path d="M22 21H7" />
+            <path d="m5 11 9 9" />
+          </svg>
+        </div>
         <div
           v-if="sizing"
-          class="pointer-events-none absolute bottom-full mb-3 rounded-full border-2 border-slate-900/80 bg-white/90 shadow"
-          :style="{ width: `${sizePreviewPx}px`, height: `${sizePreviewPx}px` }"
+          class="pointer-events-none absolute bottom-[calc(100%-0.25rem)] mb-1 rounded-full border-2 border-[var(--ink)] shadow-block"
+          :style="{
+            width: `${sizePreviewPx}px`,
+            height: `${sizePreviewPx}px`,
+            backgroundColor: sizeThumbColor,
+          }"
         />
         <div
           ref="sliderRef"
@@ -279,11 +322,15 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
           @pointerup="onSliderPointerUp"
           @pointercancel="onSliderPointerUp"
         >
-          <div class="relative h-full w-1.5 rounded-full bg-[var(--surface)] ring-2 ring-[var(--ink)]">
+          <div
+            class="relative h-full w-1.5 rounded-full bg-[var(--surface)]"
+            :style="{ outline: `2px solid ${sizeTrackAccent}` }"
+          >
             <div
-              class="absolute left-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--ink)] bg-[var(--accent)] shadow-block"
+              class="absolute left-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--ink)] shadow-block"
               :style="{
                 top: `${((BRUSH_WIDTH_MAX - width) / (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)) * 100}%`,
+                backgroundColor: sizeThumbColor,
               }"
             />
           </div>

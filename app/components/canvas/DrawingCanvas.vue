@@ -290,7 +290,7 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
       <div class="absolute left-1 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center">
         <div
           v-if="sizing"
-          class="pointer-events-none absolute bottom-full mb-3 rounded-full border-2 border-[var(--ink)] bg-transparent"
+          class="pointer-events-none absolute bottom-full mb-5 rounded-full border-2 border-[var(--ink)] bg-transparent"
           :style="{
             width: `${sizePreviewPx}px`,
             height: `${sizePreviewPx}px`,

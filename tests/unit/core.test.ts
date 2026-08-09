@@ -4,6 +4,8 @@ import { createEmptyDocument, documentToJson, parseDrawingDocument, undoStroke }
 import { documentDurationMs, filterStrokesUntil } from '~/utils/canvas/render'
 import { smoothPoint } from '~/utils/canvas/smooth'
 import { generatePrompt } from '~/utils/prompts/generatePrompt'
+import { indefiniteArticle, withIndefiniteArticle } from '~/utils/prompts/indefiniteArticle'
+import { PROMPT_NOUNS } from '~/utils/prompts/wordBanks'
 import { isExpiredTokenError, sharePath, stepTypeForNumber } from '~/types/chain'
 
 describe('strokes', () => {
@@ -75,9 +77,22 @@ describe('replay helpers', () => {
 })
 
 describe('prompts & chain helpers', () => {
+  it('picks a vs an from the first letter', () => {
+    expect(indefiniteArticle('penguin')).toBe('a')
+    expect(indefiniteArticle('octopus')).toBe('an')
+    expect(indefiniteArticle('Astronaut')).toBe('an')
+    expect(withIndefiniteArticle('dentist')).toBe('a dentist')
+  })
+
+  it('uses the right article for every bank noun', () => {
+    for (const noun of PROMPT_NOUNS) {
+      expect(withIndefiniteArticle(noun)).toBe(`${indefiniteArticle(noun)} ${noun}`)
+    }
+  })
+
   it('generatePrompt returns drawable combo shape', () => {
     const prompt = generatePrompt()
-    expect(prompt.startsWith('a ')).toBe(true)
+    expect(prompt).toMatch(/^(a|an) \S+ .+/)
     expect(prompt.length).toBeGreaterThan(5)
   })
 

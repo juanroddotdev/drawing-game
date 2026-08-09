@@ -2,14 +2,19 @@
 import type { DrawingDocument } from '~/types/stroke'
 import { renderDocument } from '~/utils/canvas/render'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   document: DrawingDocument
-}>()
+  /** No border/radius — parent frames the preview (e.g. submit sheet). */
+  bare?: boolean
+}>(), {
+  bare: false,
+})
 
 const wrapRef = ref<HTMLElement | null>(null)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let cssSize = 300
 let dpr = 1
+let resizeObserver: ResizeObserver | null = null
 
 function syncAndPaint() {
   const wrap = wrapRef.value
@@ -17,7 +22,9 @@ function syncAndPaint() {
   if (!wrap || !canvas) return
 
   const size = Math.floor(wrap.clientWidth)
-  cssSize = Math.max(160, size)
+  if (size < 32) return
+
+  cssSize = Math.max(120, size)
   dpr = Math.min(window.devicePixelRatio || 1, 2)
   canvas.width = cssSize * dpr
   canvas.height = cssSize * dpr
@@ -33,10 +40,18 @@ watch(() => props.document, syncAndPaint, { deep: true })
 
 onMounted(() => {
   syncAndPaint()
-  window.addEventListener('resize', syncAndPaint)
+  if (wrapRef.value && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => syncAndPaint())
+    resizeObserver.observe(wrapRef.value)
+  }
+  else {
+    window.addEventListener('resize', syncAndPaint)
+  }
 })
 
 onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
   window.removeEventListener('resize', syncAndPaint)
 })
 </script>
@@ -44,7 +59,8 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="wrapRef"
-    class="w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+    class="w-full overflow-hidden bg-[var(--canvas)]"
+    :class="bare ? '' : 'rounded-[var(--radius-chip)] border border-[var(--ink)] shadow-block'"
   >
     <canvas
       ref="canvasRef"

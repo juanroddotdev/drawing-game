@@ -135,7 +135,7 @@ onMounted(load)
           </NuxtLink>
           <button
             type="button"
-            class="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold"
+            class="btn-quiet !px-4 !py-3 text-sm"
             @click="load"
           >
             Refresh

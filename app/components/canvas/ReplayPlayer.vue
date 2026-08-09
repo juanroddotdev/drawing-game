@@ -132,21 +132,21 @@ defineExpose({ play, pause, replay, showFinal })
     <div class="flex flex-wrap gap-2">
       <button
         type="button"
-        class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium"
+        class="btn-ink !px-3 !py-1.5 text-sm"
         @click="playing ? pause() : play()"
       >
         {{ playing ? 'Pause' : 'Play' }}
       </button>
       <button
         type="button"
-        class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium"
+        class="btn-quiet !px-3 !py-1.5 text-sm"
         @click="replay"
       >
         Replay
       </button>
       <button
         type="button"
-        class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium"
+        class="btn-quiet !px-3 !py-1.5 text-sm"
         @click="showFinal"
       >
         Skip

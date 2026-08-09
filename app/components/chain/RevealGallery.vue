@@ -63,7 +63,7 @@ function jumpToEnd() {
       <div class="flex flex-wrap gap-2">
         <button
           type="button"
-          class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium disabled:opacity-40"
+          class="btn-quiet !px-3 !py-1.5 text-sm disabled:opacity-40"
           :disabled="index === 0 && !showAll"
           @click="prev"
         >
@@ -72,7 +72,7 @@ function jumpToEnd() {
         <button
           v-if="!showAll"
           type="button"
-          class="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white"
+          class="btn-ink !px-3 !py-1.5 text-sm"
           @click="next"
         >
           {{ isLast ? 'Show all' : 'Next' }}
@@ -80,7 +80,7 @@ function jumpToEnd() {
         <button
           v-else
           type="button"
-          class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium"
+          class="btn-quiet !px-3 !py-1.5 text-sm"
           @click="restart"
         >
           Replay show
@@ -88,7 +88,7 @@ function jumpToEnd() {
         <button
           v-if="!showAll"
           type="button"
-          class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium"
+          class="btn-quiet !px-3 !py-1.5 text-sm"
           @click="jumpToEnd"
         >
           Skip to gallery

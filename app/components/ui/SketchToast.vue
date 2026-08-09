@@ -62,7 +62,7 @@ onBeforeUnmount(clearTimer)
       >
         <button
           type="button"
-          class="flex-1 border border-[var(--ink)] bg-[var(--surface)] px-2 py-1.5 text-xs font-bold shadow-block"
+          class="btn-quiet flex-1 !px-2 !py-1.5 text-xs"
           @click="emit('dismiss')"
         >
           {{ cancelLabel }}

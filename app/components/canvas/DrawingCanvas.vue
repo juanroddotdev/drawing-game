@@ -238,7 +238,7 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
   <div class="relative h-full min-h-[16rem] w-full">
     <div
       ref="wrapRef"
-      class="relative mx-auto h-full w-full max-w-[100dvh] overflow-hidden bg-[var(--canvas)] sm:rounded-xl sm:border sm:border-[var(--ink)] sm:shadow-block"
+      class="relative mx-auto h-full w-full max-w-[100dvh] overflow-hidden border border-[var(--ink)] bg-[var(--canvas)] sm:rounded-xl sm:shadow-block"
     >
       <canvas
         ref="canvasRef"

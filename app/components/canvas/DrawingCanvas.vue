@@ -318,7 +318,7 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
         </div>
         <!-- Tool cue under track (icon only) -->
         <div
-          class="pointer-events-none mt-1.5 text-[var(--ink)]"
+          class="pointer-events-none mt-5 text-[var(--ink)]"
           :aria-label="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
           :title="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
         >

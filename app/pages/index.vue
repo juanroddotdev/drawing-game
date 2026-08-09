@@ -1,5 +1,35 @@
 <script setup lang="ts">
 useHead({ title: 'DoodleLoop' })
+
+/**
+ * Loop line choreography (mirrors pass path):
+ * word → arrow into next → prior arrow settles to a line → …
+ * Ends with a trailing arrow after Guess (the loop keeps going).
+ * Builds left → right in place so Draw never jumps.
+ */
+const beat = ref(0)
+const timers: ReturnType<typeof setTimeout>[] = []
+
+const BEAT_START_MS = 1280
+const BEAT_STEP_MS = 340
+const TOTAL_BEATS = 6
+
+onMounted(() => {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (reduced) {
+    beat.value = TOTAL_BEATS
+    return
+  }
+  for (let i = 1; i <= TOTAL_BEATS; i++) {
+    timers.push(setTimeout(() => {
+      beat.value = i
+    }, BEAT_START_MS + (i - 1) * BEAT_STEP_MS))
+  }
+})
+
+onBeforeUnmount(() => {
+  for (const t of timers) clearTimeout(t)
+})
 </script>
 
 <template>
@@ -22,10 +52,123 @@ useHead({ title: 'DoodleLoop' })
           >
             DoodleLoop
           </NuxtLink>
-          <p class="hero-line hero-line-2 pointer-events-none mt-4 text-xl font-bold tracking-tight text-[var(--ink)] sm:text-2xl">
-            Draw. Pass. Guess.
-            <span class="text-[var(--accent-deep)]">Repeat.</span>
-          </p>
+
+          <!-- Build LTR from the left so Draw never jumps -->
+          <div class="mt-4 w-full min-h-[1.75rem] sm:min-h-[2rem]">
+            <p
+              class="pointer-events-none inline-flex items-center gap-2 text-left text-xl font-bold tracking-tight text-[var(--ink)] sm:gap-2.5 sm:text-2xl"
+              aria-label="Draw, pass, guess"
+            >
+              <span
+                v-if="beat >= 1"
+                class="loop-piece"
+              >Draw</span>
+
+              <svg
+                v-if="beat === 2"
+                class="loop-piece h-3.5 w-7 shrink-0 sm:h-4 sm:w-8"
+                viewBox="0 0 40 16"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M2 8 C12 3, 20 13, 28 8 L28 8"
+                  stroke="currentColor"
+                  stroke-width="2.25"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M24 4 L32 8 L24 12"
+                  stroke="currentColor"
+                  stroke-width="2.25"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <svg
+                v-else-if="beat >= 3"
+                class="loop-piece h-3 w-7 shrink-0 sm:w-8"
+                viewBox="0 0 40 12"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M1 7 C10 2, 18 11, 28 5 S36 8, 39 6"
+                  stroke="currentColor"
+                  stroke-width="2.25"
+                  stroke-linecap="round"
+                />
+              </svg>
+
+              <span
+                v-if="beat >= 3"
+                class="loop-piece"
+              >Pass</span>
+
+              <svg
+                v-if="beat === 4"
+                class="loop-piece h-3.5 w-7 shrink-0 sm:h-4 sm:w-8"
+                viewBox="0 0 40 16"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M2 8 C12 3, 20 13, 28 8 L28 8"
+                  stroke="currentColor"
+                  stroke-width="2.25"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M24 4 L32 8 L24 12"
+                  stroke="currentColor"
+                  stroke-width="2.25"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <svg
+                v-else-if="beat >= 5"
+                class="loop-piece h-3 w-7 shrink-0 sm:w-8"
+                viewBox="0 0 40 12"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M1 7 C10 2, 18 11, 28 5 S36 8, 39 6"
+                  stroke="currentColor"
+                  stroke-width="2.25"
+                  stroke-linecap="round"
+                />
+              </svg>
+
+              <span
+                v-if="beat >= 5"
+                class="loop-piece"
+              >Guess</span>
+
+              <svg
+                v-if="beat >= 6"
+                class="loop-piece h-3.5 w-7 shrink-0 sm:h-4 sm:w-8"
+                viewBox="0 0 40 16"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M2 8 C12 3, 20 13, 28 8 L28 8"
+                  stroke="currentColor"
+                  stroke-width="2.25"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M24 4 L32 8 L24 12"
+                  stroke="currentColor"
+                  stroke-width="2.25"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </p>
+          </div>
         </div>
       </section>
 
@@ -47,11 +190,22 @@ useHead({ title: 'DoodleLoop' })
   animation-delay: 1.05s;
 }
 
-.hero-line-2 {
-  animation-delay: 1.28s;
+.loop-piece {
+  animation: loop-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes hero-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes loop-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
   to {
     opacity: 1;
     transform: translateY(0);
@@ -71,6 +225,7 @@ useHead({ title: 'DoodleLoop' })
 
 @media (prefers-reduced-motion: reduce) {
   .hero-line,
+  .loop-piece,
   :deep(.landing-hero__strip) {
     opacity: 1;
     transform: none;

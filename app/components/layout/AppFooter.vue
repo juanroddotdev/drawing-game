@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const { enabled: showDevTools } = useDevTools()
+const isDev = import.meta.dev
 const open = ref(false)
 const root = ref<HTMLElement | null>(null)
 
@@ -72,6 +73,15 @@ onBeforeUnmount(() => {
           @click="close"
         >
           Canvas lab
+        </NuxtLink>
+        <NuxtLink
+          v-if="isDev"
+          to="/lab/screens"
+          role="menuitem"
+          class="block px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50"
+          @click="close"
+        >
+          Screen lab
         </NuxtLink>
         <NuxtLink
           v-if="showDevTools"

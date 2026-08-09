@@ -76,11 +76,11 @@
         </div>
       </li>
 
-      <li class="chaos-beat chaos-beat-2 ml-8 self-end sm:ml-12">
+      <li class="chaos-beat chaos-beat-2 ml-8 w-[min(calc(100%-2rem),15.5rem)] shrink-0 self-end sm:ml-12 sm:w-[17rem]">
         <span class="mb-1.5 block text-right text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
           Drawing
         </span>
-        <div class="relative w-[min(100%,15.5rem)] overflow-hidden rounded-2xl rounded-br-md border border-[var(--ink)] bg-[var(--canvas)] shadow-block aspect-square sm:w-[17rem]">
+        <div class="relative aspect-square w-full overflow-hidden rounded-2xl rounded-br-md border border-[var(--ink)] bg-[var(--canvas)] shadow-block">
           <svg
             viewBox="0 0 160 160"
             class="absolute inset-0 h-full w-full text-[var(--ink)]"
@@ -136,9 +136,6 @@
             <path d="M40 128c4-6 8-6 12 0" />
             <path d="M118 130c4-5 8-5 11 0" />
           </svg>
-          <span class="btn-accent pointer-events-none absolute right-2.5 top-2.5 !px-3 !py-1.5 text-xs shadow-block">
-            Done
-          </span>
         </div>
       </li>
 

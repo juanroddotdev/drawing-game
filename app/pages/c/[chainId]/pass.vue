@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import type { DrawingDocument } from '~/types/stroke'
 import { DEFAULT_MAX_STEPS, sharePath, stepTypeForNumber } from '~/types/chain'
+import { mockPassDrawing } from '~/utils/lab/fixtures'
 import { pickPassSubheader } from '~/utils/passCopy'
 import { takePassHandoff, type PassHandoff } from '~/utils/passHandoff'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.chainId || ''))
 const token = computed(() => String(route.query.token || ''))
+/** Design lab: `/c/lab/pass?mock=1&done=4&…` — local Nuxt only. */
+const isMock = computed(() => import.meta.dev && String(route.query.mock || '') === '1')
 const nextStep = computed(() => {
   const n = Number(route.query.step)
   return Number.isFinite(n) && n > 0 ? n : 0
@@ -24,6 +27,9 @@ const you = computed(() => String(route.query.you || ''))
 
 const absoluteUrl = computed(() => {
   if (!import.meta.client) return ''
+  if (isMock.value) {
+    return `${window.location.origin}/c/labdemo/play?token=preview`
+  }
   return `${window.location.origin}${sharePath(slug.value, token.value)}`
 })
 
@@ -46,7 +52,7 @@ const loopSteps = computed(() =>
 
 const { enabled: showDevTools } = useDevTools()
 /** Play-next / inspector — local Nuxt only, never production/Vercel builds. */
-const showAdvanced = computed(() => import.meta.dev && showDevTools.value)
+const showAdvanced = computed(() => import.meta.dev && showDevTools.value && !isMock.value)
 const advancedOpen = ref(false)
 
 const handoff = ref<PassHandoff | null>(null)
@@ -59,6 +65,18 @@ const previewDrawing = computed(() => {
 })
 
 onMounted(() => {
+  if (isMock.value) {
+    const kind = String(route.query.kind || '') === 'guess' ? 'guess' : 'draw'
+    handoff.value = {
+      slug: slug.value || 'lab',
+      kind,
+      drawing: kind === 'draw' ? mockPassDrawing() : null,
+      guessText: kind === 'guess' ? 'a hairy potato on wheels' : null,
+    }
+    subheader.value = pickPassSubheader(kind, you.value || 'Juan')
+    return
+  }
+
   handoff.value = takePassHandoff(slug.value)
   const kind = handoff.value?.kind
     ?? (completedStep.value > 0 ? stepTypeForNumber(completedStep.value) : 'draw')

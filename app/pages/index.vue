@@ -2,22 +2,18 @@
 useHead({ title: 'DoodleLoop' })
 
 /**
- * Loop line choreography (mirrors pass path):
- * word writes letter-by-letter → connector draws in → prior arrow
- * settles to a drawn line → … trailing arrow after Guess.
- * Builds left → right in place so Draw never jumps.
+ * Loop line: full layout is always reserved (opacity reveal only), then
+ * centered under the brand — so pieces appear in place without jumping.
  */
 const beat = ref(0)
+const brandPress = ref(false)
 const timers: ReturnType<typeof setTimeout>[] = []
 
 const BEAT_START_MS = 1280
-/** Enough room for a short word to write before the next beat */
-const BEAT_STEP_MS = 420
+const BEAT_STEP_MS = 380
 const TOTAL_BEATS = 6
-
-const DRAW = 'Draw'.split('')
-const PASS = 'Pass'.split('')
-const GUESS = 'Guess'.split('')
+/** Pause after the trailing arrow before the CTA press cue */
+const PRESS_AFTER_MS = 520
 
 onMounted(() => {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -28,6 +24,11 @@ onMounted(() => {
   for (let i = 1; i <= TOTAL_BEATS; i++) {
     timers.push(setTimeout(() => {
       beat.value = i
+      if (i === TOTAL_BEATS) {
+        timers.push(setTimeout(() => {
+          brandPress.value = true
+        }, PRESS_AFTER_MS))
+      }
     }, BEAT_START_MS + (i - 1) * BEAT_STEP_MS))
   }
 })
@@ -53,157 +54,136 @@ onBeforeUnmount(() => {
           </h1>
           <NuxtLink
             to="/play/new"
-            class="hero-line hero-line-1 brand-cta btn-accent pointer-events-auto !px-6 !py-4 font-sketch text-4xl font-bold leading-none tracking-tight sm:!px-8 sm:!py-5 sm:text-5xl"
+            class="brand-cta btn-accent pointer-events-auto !px-6 !py-4 font-sketch text-4xl font-bold leading-none tracking-tight sm:!px-8 sm:!py-5 sm:text-5xl"
+            :class="{ 'brand-cta--press': brandPress }"
           >
             DoodleLoop
           </NuxtLink>
 
-          <!-- Build LTR from the left so Draw never jumps -->
-          <div class="mt-4 w-full min-h-[1.75rem] sm:min-h-[2rem]">
+          <!-- Full width reserved from beat 0, then centered as a unit under the brand -->
+          <div class="mt-4 flex w-full justify-center">
             <p
-              class="pointer-events-none inline-flex items-center gap-2 text-left font-sketch text-xl font-bold tracking-tight text-[var(--ink)] sm:gap-2.5 sm:text-2xl"
+              class="pointer-events-none flex items-center gap-2 font-sketch text-xl font-bold tracking-tight text-[var(--ink)] sm:gap-2.5 sm:text-2xl"
               aria-label="Draw, pass, guess"
             >
               <span
-                v-if="beat >= 1"
-                class="loop-word"
-                aria-hidden="true"
-              >
-                <span
-                  v-for="(ch, i) in DRAW"
-                  :key="`d-${i}`"
-                  class="loop-ch"
-                  :style="{ '--i': i }"
-                >{{ ch }}</span>
-              </span>
-
-              <svg
-                v-if="beat === 2"
-                class="h-3.5 w-7 shrink-0 sm:h-4 sm:w-8"
-                viewBox="0 0 40 16"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  class="loop-draw loop-draw--shaft"
-                  d="M2 8 C12 3, 20 13, 28 8 L28 8"
-                  stroke="currentColor"
-                  stroke-width="2.25"
-                  stroke-linecap="round"
-                />
-                <path
-                  class="loop-draw loop-draw--head"
-                  d="M24 4 L32 8 L24 12"
-                  stroke="currentColor"
-                  stroke-width="2.25"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <svg
-                v-else-if="beat >= 3"
-                class="h-3 w-7 shrink-0 sm:w-8"
-                viewBox="0 0 40 12"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  class="loop-draw loop-draw--line"
-                  d="M1 7 C10 2, 18 11, 28 5 S36 8, 39 6"
-                  stroke="currentColor"
-                  stroke-width="2.25"
-                  stroke-linecap="round"
-                />
-              </svg>
+                class="loop-reveal"
+                :class="beat >= 1 ? 'loop-reveal--on' : ''"
+              >Draw</span>
 
               <span
-                v-if="beat >= 3"
-                class="loop-word"
+                class="relative inline-flex h-4 w-7 shrink-0 items-center justify-center sm:w-8"
                 aria-hidden="true"
               >
-                <span
-                  v-for="(ch, i) in PASS"
-                  :key="`p-${i}`"
-                  class="loop-ch"
-                  :style="{ '--i': i }"
-                >{{ ch }}</span>
+                <svg
+                  class="loop-reveal absolute h-3.5 w-7 sm:h-4 sm:w-8"
+                  :class="beat === 2 ? 'loop-reveal--on' : ''"
+                  viewBox="0 0 40 16"
+                  fill="none"
+                >
+                  <path
+                    d="M2 8 C12 3, 20 13, 28 8 L28 8"
+                    stroke="currentColor"
+                    stroke-width="2.25"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M24 4 L32 8 L24 12"
+                    stroke="currentColor"
+                    stroke-width="2.25"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <svg
+                  class="loop-reveal absolute h-3 w-7 sm:w-8"
+                  :class="beat >= 3 ? 'loop-reveal--on' : ''"
+                  viewBox="0 0 40 12"
+                  fill="none"
+                >
+                  <path
+                    d="M1 7 C10 2, 18 11, 28 5 S36 8, 39 6"
+                    stroke="currentColor"
+                    stroke-width="2.25"
+                    stroke-linecap="round"
+                  />
+                </svg>
               </span>
-
-              <svg
-                v-if="beat === 4"
-                class="h-3.5 w-7 shrink-0 sm:h-4 sm:w-8"
-                viewBox="0 0 40 16"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  class="loop-draw loop-draw--shaft"
-                  d="M2 8 C12 3, 20 13, 28 8 L28 8"
-                  stroke="currentColor"
-                  stroke-width="2.25"
-                  stroke-linecap="round"
-                />
-                <path
-                  class="loop-draw loop-draw--head"
-                  d="M24 4 L32 8 L24 12"
-                  stroke="currentColor"
-                  stroke-width="2.25"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <svg
-                v-else-if="beat >= 5"
-                class="h-3 w-7 shrink-0 sm:w-8"
-                viewBox="0 0 40 12"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  class="loop-draw loop-draw--line"
-                  d="M1 7 C10 2, 18 11, 28 5 S36 8, 39 6"
-                  stroke="currentColor"
-                  stroke-width="2.25"
-                  stroke-linecap="round"
-                />
-              </svg>
 
               <span
-                v-if="beat >= 5"
-                class="loop-word"
+                class="loop-reveal"
+                :class="beat >= 3 ? 'loop-reveal--on' : ''"
+              >Pass</span>
+
+              <span
+                class="relative inline-flex h-4 w-7 shrink-0 items-center justify-center sm:w-8"
                 aria-hidden="true"
               >
-                <span
-                  v-for="(ch, i) in GUESS"
-                  :key="`g-${i}`"
-                  class="loop-ch"
-                  :style="{ '--i': i }"
-                >{{ ch }}</span>
+                <svg
+                  class="loop-reveal absolute h-3.5 w-7 sm:h-4 sm:w-8"
+                  :class="beat === 4 ? 'loop-reveal--on' : ''"
+                  viewBox="0 0 40 16"
+                  fill="none"
+                >
+                  <path
+                    d="M2 8 C12 3, 20 13, 28 8 L28 8"
+                    stroke="currentColor"
+                    stroke-width="2.25"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M24 4 L32 8 L24 12"
+                    stroke="currentColor"
+                    stroke-width="2.25"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                <svg
+                  class="loop-reveal absolute h-3 w-7 sm:w-8"
+                  :class="beat >= 5 ? 'loop-reveal--on' : ''"
+                  viewBox="0 0 40 12"
+                  fill="none"
+                >
+                  <path
+                    d="M1 7 C10 2, 18 11, 28 5 S36 8, 39 6"
+                    stroke="currentColor"
+                    stroke-width="2.25"
+                    stroke-linecap="round"
+                  />
+                </svg>
               </span>
 
-              <svg
-                v-if="beat >= 6"
-                class="h-3.5 w-7 shrink-0 sm:h-4 sm:w-8"
-                viewBox="0 0 40 16"
-                fill="none"
+              <span
+                class="loop-reveal"
+                :class="beat >= 5 ? 'loop-reveal--on' : ''"
+              >Guess</span>
+
+              <span
+                class="relative inline-flex h-4 w-7 shrink-0 items-center justify-center sm:w-8"
                 aria-hidden="true"
               >
-                <path
-                  class="loop-draw loop-draw--shaft"
-                  d="M2 8 C12 3, 20 13, 28 8 L28 8"
-                  stroke="currentColor"
-                  stroke-width="2.25"
-                  stroke-linecap="round"
-                />
-                <path
-                  class="loop-draw loop-draw--head"
-                  d="M24 4 L32 8 L24 12"
-                  stroke="currentColor"
-                  stroke-width="2.25"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
+                <svg
+                  class="loop-reveal absolute h-3.5 w-7 sm:h-4 sm:w-8"
+                  :class="beat >= 6 ? 'loop-reveal--on' : ''"
+                  viewBox="0 0 40 16"
+                  fill="none"
+                >
+                  <path
+                    d="M2 8 C12 3, 20 13, 28 8 L28 8"
+                    stroke="currentColor"
+                    stroke-width="2.25"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M24 4 L32 8 L24 12"
+                    stroke="currentColor"
+                    stroke-width="2.25"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
             </p>
           </div>
         </div>
@@ -217,70 +197,55 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.hero-line {
+.brand-cta {
   opacity: 0;
-  transform: translateY(0.55rem);
-  animation: hero-in 0.55s ease forwards;
-}
-
-.hero-line-1 {
+  /* forwards (not both): stay fully hidden during the delay, then pop */
+  animation: brand-cta-pop 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   animation-delay: 1.05s;
 }
 
-.loop-word {
-  display: inline-flex;
-  line-height: 1;
+.brand-cta--press {
+  opacity: 1;
+  animation: brand-cta-press 0.52s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.loop-ch {
-  display: inline-block;
+.loop-reveal {
   opacity: 0;
-  clip-path: inset(0 100% 0 0);
-  transform: translateY(0.1em);
-  animation: loop-write 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-  animation-delay: calc(var(--i) * 0.05s);
+  transition: opacity 0.28s ease;
 }
 
-.loop-draw {
-  fill: none;
+.loop-reveal--on {
+  opacity: 1;
 }
 
-.loop-draw--shaft {
-  stroke-dasharray: 42;
-  stroke-dashoffset: 42;
-  animation: loop-stroke 0.34s ease forwards;
-}
-
-.loop-draw--head {
-  stroke-dasharray: 28;
-  stroke-dashoffset: 28;
-  animation: loop-stroke 0.22s ease 0.14s forwards;
-}
-
-.loop-draw--line {
-  stroke-dasharray: 52;
-  stroke-dashoffset: 52;
-  animation: loop-stroke 0.38s ease forwards;
-}
-
-@keyframes hero-in {
-  to {
+@keyframes brand-cta-pop {
+  from {
+    transform: scale(0.82);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.05);
     opacity: 1;
-    transform: translateY(0);
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
-@keyframes loop-write {
-  to {
-    opacity: 1;
-    clip-path: inset(0 0 0 0);
-    transform: translateY(0);
+/* Neo-brutal press: sink into the hard shadow, then release */
+@keyframes brand-cta-press {
+  0% {
+    transform: translate(0, 0);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
   }
-}
-
-@keyframes loop-stroke {
-  to {
-    stroke-dashoffset: 0;
+  35% {
+    transform: translate(var(--shadow-offset), var(--shadow-offset));
+    box-shadow: 0 0 0 0 var(--ink);
+  }
+  100% {
+    transform: translate(0, 0);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--ink);
   }
 }
 
@@ -296,17 +261,16 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-line,
-  .loop-ch,
-  .loop-draw--shaft,
-  .loop-draw--head,
-  .loop-draw--line,
+  .brand-cta,
+  .brand-cta--press,
   :deep(.landing-hero__strip) {
     opacity: 1;
     transform: none;
     animation: none;
-    clip-path: none;
-    stroke-dashoffset: 0;
+  }
+
+  .loop-reveal {
+    transition: none;
   }
 
   :deep(.landing-hero__strip) {

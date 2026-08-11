@@ -2,18 +2,21 @@
 useHead({ title: 'DoodleLoop' })
 
 /**
- * Loop line: full layout is always reserved (opacity reveal only), then
- * centered under the brand — so pieces appear in place without jumping.
+ * Loop line: layout reserved from the start. An arrow tip draws through
+ * each connector; words pop in as it arrives. Finished connectors keep
+ * the trail and drop the tip so it feels like one continuous pass.
  */
 const beat = ref(0)
 const brandPress = ref(false)
 const timers: ReturnType<typeof setTimeout>[] = []
 
-const BEAT_START_MS = 1280
-const BEAT_STEP_MS = 380
+/** Brand CTA appears at 1.05s — subtitle starts with it */
+const BEAT_START_MS = 1050
+/** Time between word / connector advances */
+const BEAT_STEP_MS = 200
 const TOTAL_BEATS = 6
 /** Pause after the trailing arrow before the CTA press cue */
-const PRESS_AFTER_MS = 520
+const PRESS_AFTER_MS = 360
 
 onMounted(() => {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -36,6 +39,13 @@ onMounted(() => {
 onBeforeUnmount(() => {
   for (const t of timers) clearTimeout(t)
 })
+
+/** Connector phase: idle | drawing (tip leading) | done (trail only) */
+function connectorPhase(drawBeat: number, doneBeat: number): 'idle' | 'drawing' | 'done' {
+  if (beat.value >= doneBeat) return 'done'
+  if (beat.value >= drawBeat) return 'drawing'
+  return 'idle'
+}
 </script>
 
 <template>
@@ -67,116 +77,99 @@ onBeforeUnmount(() => {
               aria-label="Draw, pass, guess"
             >
               <span
-                class="loop-reveal"
-                :class="beat >= 1 ? 'loop-reveal--on' : ''"
+                class="loop-word"
+                :class="beat >= 1 ? 'loop-word--on' : ''"
               >Draw</span>
 
               <span
-                class="relative inline-flex h-4 w-7 shrink-0 items-center justify-center sm:w-8"
+                class="loop-connector"
+                :class="`loop-connector--${connectorPhase(2, 3)}`"
                 aria-hidden="true"
               >
                 <svg
-                  class="loop-reveal absolute h-3.5 w-7 sm:h-4 sm:w-8"
-                  :class="beat === 2 ? 'loop-reveal--on' : ''"
+                  class="h-3.5 w-7 sm:h-4 sm:w-8"
                   viewBox="0 0 40 16"
                   fill="none"
                 >
                   <path
-                    d="M2 8 C12 3, 20 13, 28 8 L28 8"
+                    class="loop-trail"
+                    pathLength="1"
+                    d="M2 8 C12 3, 20 13, 30 8"
                     stroke="currentColor"
                     stroke-width="2.25"
                     stroke-linecap="round"
                   />
                   <path
-                    d="M24 4 L32 8 L24 12"
+                    class="loop-tip"
+                    d="M26 4 L34 8 L26 12"
                     stroke="currentColor"
                     stroke-width="2.25"
                     stroke-linecap="round"
                     stroke-linejoin="round"
                   />
                 </svg>
-                <svg
-                  class="loop-reveal absolute h-3 w-7 sm:w-8"
-                  :class="beat >= 3 ? 'loop-reveal--on' : ''"
-                  viewBox="0 0 40 12"
-                  fill="none"
-                >
-                  <path
-                    d="M1 7 C10 2, 18 11, 28 5 S36 8, 39 6"
-                    stroke="currentColor"
-                    stroke-width="2.25"
-                    stroke-linecap="round"
-                  />
-                </svg>
               </span>
 
               <span
-                class="loop-reveal"
-                :class="beat >= 3 ? 'loop-reveal--on' : ''"
+                class="loop-word"
+                :class="beat >= 3 ? 'loop-word--on' : ''"
               >Pass</span>
 
               <span
-                class="relative inline-flex h-4 w-7 shrink-0 items-center justify-center sm:w-8"
+                class="loop-connector"
+                :class="`loop-connector--${connectorPhase(4, 5)}`"
                 aria-hidden="true"
               >
                 <svg
-                  class="loop-reveal absolute h-3.5 w-7 sm:h-4 sm:w-8"
-                  :class="beat === 4 ? 'loop-reveal--on' : ''"
+                  class="h-3.5 w-7 sm:h-4 sm:w-8"
                   viewBox="0 0 40 16"
                   fill="none"
                 >
                   <path
-                    d="M2 8 C12 3, 20 13, 28 8 L28 8"
+                    class="loop-trail"
+                    pathLength="1"
+                    d="M2 8 C12 3, 20 13, 30 8"
                     stroke="currentColor"
                     stroke-width="2.25"
                     stroke-linecap="round"
                   />
                   <path
-                    d="M24 4 L32 8 L24 12"
+                    class="loop-tip"
+                    d="M26 4 L34 8 L26 12"
                     stroke="currentColor"
                     stroke-width="2.25"
                     stroke-linecap="round"
                     stroke-linejoin="round"
                   />
                 </svg>
-                <svg
-                  class="loop-reveal absolute h-3 w-7 sm:w-8"
-                  :class="beat >= 5 ? 'loop-reveal--on' : ''"
-                  viewBox="0 0 40 12"
-                  fill="none"
-                >
-                  <path
-                    d="M1 7 C10 2, 18 11, 28 5 S36 8, 39 6"
-                    stroke="currentColor"
-                    stroke-width="2.25"
-                    stroke-linecap="round"
-                  />
-                </svg>
               </span>
 
               <span
-                class="loop-reveal"
-                :class="beat >= 5 ? 'loop-reveal--on' : ''"
+                class="loop-word"
+                :class="beat >= 5 ? 'loop-word--on' : ''"
               >Guess</span>
 
               <span
-                class="relative inline-flex h-4 w-7 shrink-0 items-center justify-center sm:w-8"
+                class="loop-connector"
+                :class="`loop-connector--${connectorPhase(6, 7)}`"
                 aria-hidden="true"
               >
                 <svg
-                  class="loop-reveal absolute h-3.5 w-7 sm:h-4 sm:w-8"
-                  :class="beat >= 6 ? 'loop-reveal--on' : ''"
+                  class="h-3.5 w-7 sm:h-4 sm:w-8"
                   viewBox="0 0 40 16"
                   fill="none"
                 >
                   <path
-                    d="M2 8 C12 3, 20 13, 28 8 L28 8"
+                    class="loop-trail"
+                    pathLength="1"
+                    d="M2 8 C12 3, 20 13, 30 8"
                     stroke="currentColor"
                     stroke-width="2.25"
                     stroke-linecap="round"
                   />
                   <path
-                    d="M24 4 L32 8 L24 12"
+                    class="loop-tip"
+                    d="M26 4 L34 8 L26 12"
                     stroke="currentColor"
                     stroke-width="2.25"
                     stroke-linecap="round"
@@ -209,13 +202,81 @@ onBeforeUnmount(() => {
   animation: brand-cta-press 0.52s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.loop-reveal {
+.loop-word {
   opacity: 0;
-  transition: opacity 0.28s ease;
+  transform: translateX(-0.35em) scale(0.92);
 }
 
-.loop-reveal--on {
-  opacity: 1;
+.loop-word--on {
+  animation: loop-word-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.loop-connector {
+  display: inline-flex;
+  height: 1rem;
+  width: 1.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .loop-connector {
+    width: 2rem;
+  }
+}
+
+.loop-trail {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.loop-tip {
+  opacity: 0;
+}
+
+.loop-connector--drawing .loop-trail {
+  animation: loop-trail-draw 0.2s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+
+.loop-connector--done .loop-trail {
+  stroke-dashoffset: 0;
+}
+
+.loop-connector--drawing .loop-tip {
+  animation: loop-tip-in 0.14s ease-out 0.08s forwards;
+}
+
+.loop-connector--done .loop-tip {
+  opacity: 0;
+  animation: none;
+  transition: opacity 0.12s ease;
+}
+
+@keyframes loop-word-in {
+  from {
+    opacity: 0;
+    transform: translateX(-0.35em) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes loop-trail-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes loop-tip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes brand-cta-pop {
@@ -269,8 +330,26 @@ onBeforeUnmount(() => {
     animation: none;
   }
 
-  .loop-reveal {
+  .loop-word,
+  .loop-word--on {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .loop-trail {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+
+  .loop-tip {
+    opacity: 1;
+    animation: none;
     transition: none;
+  }
+
+  .loop-connector--done .loop-tip {
+    opacity: 0;
   }
 
   :deep(.landing-hero__strip) {

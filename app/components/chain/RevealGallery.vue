@@ -54,39 +54,35 @@ const brandCtaIds = ref<Record<string, true>>({})
 const scene = computed(() => timeline.value[index.value] ?? null)
 const canGoBack = computed(() => index.value > 0)
 
-/** One segment per beat in the active cycle. */
-const segmentCount = computed(() => {
-  const steps = props.reveal.steps.length
-  if (steps === 0) return 1
+/**
+ * How far the icon path has grown (0 = prompt only; N = through step N;
+ * max = brand/callback — full path complete).
+ */
+const pathProgress = computed(() => {
   const s = scene.value
-  // Opening cycle includes the prompt card
-  if (!s || s.cycle === 0) return 1 + steps + 2
-  return steps + 2
+  const max = props.reveal.steps.length
+  if (!s || s.kind === 'prompt') return 0
+  if (s.kind === 'step') return s.step.step_number
+  return max
 })
 
-const segmentIndex = computed(() => {
-  const s = scene.value
-  if (!s) return 0
-  if (s.kind === 'prompt') return 0
-  if (s.kind === 'step') {
-    return s.cycle > 0 ? s.step.step_number - 1 : s.step.step_number
-  }
-  const brandIdx = s.cycle > 0
-    ? props.reveal.steps.length
-    : props.reveal.steps.length + 1
-  if (s.kind === 'brand') return brandIdx
-  return brandIdx + 1
-})
+const pathNodes = computed(() =>
+  Array.from({ length: props.reveal.steps.length }, (_, i) => {
+    const n = i + 1
+    return {
+      n,
+      type: stepTypeForNumber(n) as StepType,
+      visible: n <= pathProgress.value,
+      done: n < pathProgress.value || (n === pathProgress.value && (scene.value?.kind === 'brand' || scene.value?.kind === 'callback')),
+      latest: n === pathProgress.value && scene.value?.kind === 'step',
+    }
+  }),
+)
+
+const visiblePathNodes = computed(() => pathNodes.value.filter(n => n.visible))
 
 let advanceLock = false
 let brandTimer: ReturnType<typeof setTimeout> | null = null
-
-function pathThrough(through: number) {
-  return Array.from({ length: through }, (_, i) => ({
-    n: i + 1,
-    type: stepTypeForNumber(i + 1) as StepType,
-  }))
-}
 
 function clearBrandTimer() {
   if (brandTimer != null) {
@@ -194,29 +190,97 @@ onBeforeUnmount(() => {
     aria-roledescription="carousel"
     aria-label="Reveal story"
   >
-    <!-- Progress — Stories-style segments for the loop -->
+    <!-- Progress — circle path grows left → right like a fill bar -->
     <div
-      class="flex shrink-0 gap-1 px-1 pb-3 pt-1"
+      class="flex min-h-11 w-full shrink-0 items-center justify-center px-1 pb-3 pt-1"
       data-story-chrome
       role="img"
-      :aria-label="`Beat ${segmentIndex + 1} of ${segmentCount}`"
+      :aria-label="pathProgress === 0
+        ? 'Reveal starting'
+        : `Through step ${pathProgress} of ${reveal.steps.length}`"
     >
-      <div
-        v-for="n in segmentCount"
-        :key="n"
-        class="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--ink)]/15"
+      <TransitionGroup
+        v-if="visiblePathNodes.length"
+        name="path-node"
+        tag="div"
+        class="flex w-full max-w-sm items-center px-1"
       >
         <div
-          class="h-full rounded-full bg-[var(--ink)] transition-[width] duration-300 ease-out"
-          :style="{
-            width: n - 1 < segmentIndex
-              ? '100%'
-              : n - 1 === segmentIndex
-                ? '100%'
-                : '0%',
-          }"
-        />
-      </div>
+          v-for="(node, idx) in visiblePathNodes"
+          :key="node.n"
+          class="flex min-w-0 items-center"
+          :class="idx < visiblePathNodes.length - 1 ? 'flex-1' : 'shrink-0'"
+        >
+          <span
+            class="path-node-icon flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--ink)] transition-colors duration-300"
+            :class="node.done
+              ? 'bg-[var(--ink)] text-white'
+              : node.latest
+                ? 'bg-[var(--accent)] text-[var(--ink)] shadow-block'
+                : 'bg-[var(--surface)] text-[var(--ink-muted)]'"
+            :title="node.type === 'draw' ? `Draw · step ${node.n}` : `Guess · step ${node.n}`"
+          >
+            <svg
+              v-if="node.type === 'draw'"
+              viewBox="0 0 24 24"
+              class="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.25"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
+              <path d="m9 15 5-5" />
+            </svg>
+            <svg
+              v-else
+              viewBox="0 0 24 24"
+              class="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.25"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M7 8h10" />
+              <path d="M7 12h6" />
+              <path d="M21 15a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" />
+            </svg>
+          </span>
+
+          <div
+            v-if="idx < visiblePathNodes.length - 1"
+            class="path-connector flex h-9 min-w-[0.5rem] flex-1 items-center px-0.5"
+            aria-hidden="true"
+          >
+            <svg
+              class="h-3 w-full text-[var(--ink)]"
+              viewBox="0 0 40 12"
+              preserveAspectRatio="none"
+              fill="none"
+            >
+              <path
+                class="path-connector-line"
+                d="M1 7 C10 2, 18 11, 28 5 S36 8, 39 6"
+                stroke="currentColor"
+                stroke-width="2.25"
+                stroke-linecap="round"
+                pathLength="1"
+              />
+            </svg>
+          </div>
+        </div>
+      </TransitionGroup>
+
+      <p
+        v-else
+        class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]"
+      >
+        It starts…
+      </p>
     </div>
 
     <!-- Stage: one card + tap zones -->
@@ -301,118 +365,22 @@ onBeforeUnmount(() => {
                 :autoplay="true"
                 chrome="overlay"
               />
-              <div
-                class="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 p-2.5 opacity-55"
-              >
-                <div
-                  class="flex items-center gap-0.5"
-                  role="img"
-                  :aria-label="`Through step ${scene.step.step_number}`"
-                >
-                  <span
-                    v-for="node in pathThrough(scene.step.step_number)"
-                    :key="node.n"
-                    class="flex size-5 items-center justify-center rounded-full border border-[var(--ink)]"
-                    :class="node.n === scene.step.step_number
-                      ? 'bg-[var(--accent)] text-[var(--ink)]'
-                      : 'bg-[var(--ink)] text-white'"
-                    :title="node.type === 'draw' ? `Draw · ${node.n}` : `Guess · ${node.n}`"
-                  >
-                    <svg
-                      v-if="node.type === 'draw'"
-                      viewBox="0 0 24 24"
-                      class="h-2.5 w-2.5"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
-                      <path d="m9 15 5-5" />
-                    </svg>
-                    <svg
-                      v-else
-                      viewBox="0 0 24 24"
-                      class="h-2.5 w-2.5"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M7 8h10" />
-                      <path d="M7 12h6" />
-                      <path d="M21 15a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" />
-                    </svg>
-                  </span>
-                </div>
-                <p
-                  v-if="scene.step.author_nickname"
-                  class="rounded-sm bg-[var(--surface)]/70 px-1.5 py-0.5 text-xs font-semibold text-[var(--ink)]"
-                >
-                  {{ scene.step.author_nickname }}
-                </p>
-              </div>
-            </div>
-          </template>
-
-          <template v-else>
-            <div class="flex items-center justify-between gap-2 opacity-45">
-              <div
-                class="flex items-center gap-0.5"
-                role="img"
-                :aria-label="`Through step ${scene.step.step_number}`"
-              >
-                <span
-                  v-for="node in pathThrough(scene.step.step_number)"
-                  :key="node.n"
-                  class="flex size-5 items-center justify-center rounded-full border border-[var(--ink)]"
-                  :class="node.n === scene.step.step_number
-                    ? 'bg-[var(--accent)] text-[var(--ink)]'
-                    : 'bg-[var(--ink)] text-white'"
-                  :title="node.type === 'draw' ? `Draw · ${node.n}` : `Guess · ${node.n}`"
-                >
-                  <svg
-                    v-if="node.type === 'draw'"
-                    viewBox="0 0 24 24"
-                    class="h-2.5 w-2.5"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
-                    <path d="m9 15 5-5" />
-                  </svg>
-                  <svg
-                    v-else
-                    viewBox="0 0 24 24"
-                    class="h-2.5 w-2.5"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M7 8h10" />
-                    <path d="M7 12h6" />
-                    <path d="M21 15a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" />
-                  </svg>
-                </span>
-              </div>
               <p
                 v-if="scene.step.author_nickname"
-                class="text-xs font-semibold text-[var(--ink)]"
+                class="pointer-events-none absolute right-2.5 top-2.5 z-10 rounded-sm bg-[var(--surface)]/70 px-1.5 py-0.5 text-xs font-semibold text-[var(--ink)] opacity-55"
               >
                 {{ scene.step.author_nickname }}
               </p>
             </div>
+          </template>
+
+          <template v-else>
+            <p
+              v-if="scene.step.author_nickname"
+              class="text-right text-xs font-semibold text-[var(--ink-muted)]"
+            >
+              {{ scene.step.author_nickname }}
+            </p>
             <p
               v-if="scene.step.guess_text"
               class="mt-4 text-center text-2xl font-bold leading-snug text-[var(--ink)] sm:text-3xl"
@@ -457,6 +425,36 @@ onBeforeUnmount(() => {
   animation: story-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Icon path: new nodes slide in from the right (progress fill) */
+.path-node-enter-active {
+  transition: opacity 0.35s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.path-node-leave-active {
+  transition: opacity 0.25s ease, transform 0.3s ease;
+  position: absolute;
+}
+
+.path-node-enter-from {
+  opacity: 0;
+  transform: translateX(1.25rem) scale(0.85);
+}
+
+.path-node-leave-to {
+  opacity: 0;
+  transform: translateX(0.5rem) scale(0.9);
+}
+
+.path-node-move {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.path-connector-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: path-draw 0.4s ease-out both;
+}
+
 .brand-write {
   display: inline-flex;
   align-items: center;
@@ -489,6 +487,15 @@ onBeforeUnmount(() => {
 
 .callback-panel {
   animation: callback-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes path-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 @keyframes story-in {
@@ -540,11 +547,19 @@ onBeforeUnmount(() => {
   .story-card,
   .brand-write--cta,
   .brand-write__ch,
-  .callback-panel {
+  .callback-panel,
+  .path-connector-line {
     animation: none;
     opacity: 1;
     clip-path: none;
     transform: none;
+    stroke-dashoffset: 0;
+  }
+
+  .path-node-enter-active,
+  .path-node-leave-active,
+  .path-node-move {
+    transition: none;
   }
 }
 </style>

@@ -1,4 +1,4 @@
-import type { RevealPayload } from '~/types/chain'
+import type { PlayPayload, RevealPayload } from '~/types/chain'
 import type { DrawingDocument, Stroke, StrokePoint } from '~/types/stroke'
 import { DRAWING_DOC_VERSION } from '~/types/stroke'
 
@@ -73,6 +73,41 @@ export const MOCK_DRAWING_SURFER = doc([
 
 export function mockPassDrawing(): DrawingDocument {
   return MOCK_DRAWING_PENGUIN
+}
+
+/** Mid-chain draw: locked prompt is the previous guess. */
+export function mockPlayDraw(stepNumber = 3): PlayPayload {
+  return {
+    status: 'active',
+    slug: 'lab',
+    max_steps: 6,
+    step_number: stepNumber,
+    step_type: 'draw',
+    due_at: null,
+    prior_guess_text: stepNumber <= 3
+      ? 'a tuxedo bowling pin on a banana'
+      : 'a chef fighting a kite',
+    prior_stroke_json: null,
+  }
+}
+
+/** Guess screens share one shell — content is the prior drawing. */
+export function mockPlayGuess(stepNumber = 2): PlayPayload {
+  const stroke = stepNumber <= 2
+    ? MOCK_DRAWING_PENGUIN
+    : stepNumber <= 4
+      ? MOCK_DRAWING_BLOB
+      : MOCK_DRAWING_SURFER
+  return {
+    status: 'active',
+    slug: 'lab',
+    max_steps: 6,
+    step_number: stepNumber,
+    step_type: 'guess',
+    due_at: null,
+    prior_guess_text: null,
+    prior_stroke_json: stroke,
+  }
 }
 
 /** Full 6-step telephone for the reveal lab. */

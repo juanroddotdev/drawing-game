@@ -3,6 +3,7 @@ import type { DrawingDocument } from '~/types/stroke'
 import { createEmptyDocument } from '~/utils/canvas/strokes'
 import type { PlayPayload } from '~/types/chain'
 import { isExpiredTokenError } from '~/types/chain'
+import { mockPlayDraw, mockPlayGuess } from '~/utils/lab/fixtures'
 import { stashPassHandoff } from '~/utils/passHandoff'
 
 const route = useRoute()
@@ -11,6 +12,8 @@ const { nickname, email, save } = usePlayerProfile()
 
 const slug = computed(() => String(route.params.chainId || ''))
 const token = computed(() => String(route.query.token || ''))
+/** Design lab: `/c/lab/play?mock=1&kind=guess|draw&step=N` — local Nuxt only. */
+const isMock = computed(() => import.meta.dev && slug.value === 'lab' && String(route.query.mock || '') === '1')
 
 const payload = ref<PlayPayload | null>(null)
 const loadError = ref('')
@@ -34,13 +37,32 @@ watch(guess, () => {
 })
 
 useHead({
-  title: computed(() => `Play — ${slug.value || 'DoodleLoop'}`),
+  title: computed(() => (
+    isMock.value
+      ? `Lab play — DoodleLoop`
+      : `Play — ${slug.value || 'DoodleLoop'}`
+  )),
 })
+
+function loadMock() {
+  const kind = String(route.query.kind || '') === 'draw' ? 'draw' : 'guess'
+  const step = Number(route.query.step)
+  const stepNumber = Number.isFinite(step) && step > 0 ? step : (kind === 'draw' ? 3 : 2)
+  payload.value = kind === 'draw' ? mockPlayDraw(stepNumber) : mockPlayGuess(stepNumber)
+  drawing.value = createEmptyDocument()
+  guess.value = ''
+  loadError.value = ''
+  expired.value = false
+}
 
 async function load() {
   loadError.value = ''
   expired.value = false
   payload.value = null
+  if (isMock.value) {
+    loadMock()
+    return
+  }
   if (!slug.value || !token.value) {
     loadError.value = 'Missing chain link or token.'
     return
@@ -84,7 +106,7 @@ function openSubmit() {
 
 async function submit() {
   submitError.value = ''
-  if (!payload.value || !token.value) return
+  if (!payload.value || (!token.value && !isMock.value)) return
   if (!nickname.value.trim()) {
     submitError.value = 'Add a nickname.'
     return
@@ -96,6 +118,12 @@ async function submit() {
   }
   if (payload.value.step_type === 'draw' && drawing.value.strokes.length === 0) {
     submitError.value = 'Empty canvas — draw something first.'
+    return
+  }
+
+  if (isMock.value) {
+    submitError.value = 'Lab preview — submit is off. Use ← → to keep touring.'
+    sheetOpen.value = false
     return
   }
 
@@ -180,6 +208,13 @@ async function reopen() {
   }
 }
 
+watch(
+  () => [route.query.mock, route.query.kind, route.query.step, route.params.chainId],
+  () => {
+    if (isMock.value) loadMock()
+  },
+)
+
 onMounted(load)
 </script>
 
@@ -190,31 +225,7 @@ onMounted(load)
     class="bg-dot-grid relative mx-auto flex h-dvh max-w-lg flex-col text-[var(--ink)]"
   >
     <div class="pointer-events-none absolute inset-x-0 top-0 z-20 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-      <NuxtLink
-        :to="`/c/${slug}`"
-        class="chip-sketch pointer-events-auto absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-xl text-[var(--ink)]"
-        aria-label="Chain status"
-        title="Chain status"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          class="h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.25"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M8 6h13" />
-          <path d="M8 12h13" />
-          <path d="M8 18h13" />
-          <path d="M3 6h.01" />
-          <path d="M3 12h.01" />
-          <path d="M3 18h.01" />
-        </svg>
-      </NuxtLink>
-      <div class="mx-auto flex justify-center px-12">
+      <div class="mx-auto flex justify-center px-4">
         <div class="pointer-events-auto">
           <ChainPromptBuilder
             :model-value="payload.prior_guess_text || 'Draw this'"
@@ -271,17 +282,11 @@ onMounted(load)
     class="flex min-h-dvh flex-col bg-gradient-to-b from-slate-100 to-slate-200 text-slate-900"
   >
     <div class="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pt-4">
-      <header class="mb-3 space-y-1">
-        <NuxtLink
-          :to="`/c/${slug}`"
-          class="text-sm font-medium text-slate-500 hover:text-slate-800"
-        >
-          Chain status
-        </NuxtLink>
-        <p
-          v-if="payload"
-          class="text-sm text-slate-600"
-        >
+      <header
+        v-if="payload"
+        class="mb-3 space-y-1"
+      >
+        <p class="text-sm text-slate-600">
           Step {{ payload.step_number }} of {{ payload.max_steps }}
           · Guess
         </p>

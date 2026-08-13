@@ -279,14 +279,17 @@ onMounted(load)
   <!-- Guess / loading / errors -->
   <main
     v-else
-    class="flex min-h-dvh flex-col bg-gradient-to-b from-slate-100 to-slate-200 text-slate-900"
+    class="bg-dot-grid flex min-h-dvh flex-col text-[var(--ink)]"
   >
-    <div class="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pt-4">
+    <div
+      class="mx-auto flex w-full max-w-lg flex-1 flex-col px-4"
+      style="padding-top: max(1rem, env(safe-area-inset-top))"
+    >
       <header
         v-if="payload"
-        class="mb-3 space-y-1"
+        class="mb-4"
       >
-        <p class="text-sm text-slate-600">
+        <p class="text-center text-[11px] font-bold text-[var(--ink-muted)]">
           Step {{ payload.step_number }} of {{ payload.max_steps }}
           · Guess
         </p>
@@ -294,30 +297,30 @@ onMounted(load)
 
       <div
         v-if="expired"
-        class="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4"
+        class="panel-sketch space-y-3 p-4"
       >
-        <p class="text-sm text-amber-950">
+        <p class="text-sm font-medium text-[var(--ink)]">
           {{ loadError }}
         </p>
-        <p class="text-sm text-amber-900/80">
+        <p class="text-sm text-[var(--ink-muted)]">
           If you were the last person to finish a step, re-open the seat and share a new link.
         </p>
         <input
           v-model="nickname"
           type="text"
           maxlength="32"
-          class="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm"
+          class="chip-sketch w-full rounded-[var(--radius-chip)] bg-[var(--surface)] px-3 py-2.5 text-sm font-medium outline-none"
           placeholder="Last completer nickname"
         >
         <p
           v-if="reopenError"
-          class="text-sm text-red-600"
+          class="text-sm font-medium text-[var(--danger)]"
         >
           {{ reopenError }}
         </p>
         <button
           type="button"
-          class="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+          class="btn-accent w-full !py-3 text-sm disabled:opacity-50"
           :disabled="busy"
           @click="reopen"
         >
@@ -327,14 +330,14 @@ onMounted(load)
 
       <p
         v-else-if="loadError"
-        class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        class="panel-sketch px-3 py-2 text-sm font-medium text-[var(--danger)]"
       >
         {{ loadError }}
       </p>
 
       <template v-else-if="payload && payload.step_type === 'guess'">
-        <div class="flex min-h-0 flex-1 flex-col gap-3 pb-28">
-          <h1 class="text-lg font-bold tracking-tight">
+        <div class="flex min-h-0 flex-1 flex-col gap-4 pb-28">
+          <h1 class="text-2xl font-bold tracking-tight">
             What is this?
           </h1>
           <CanvasStrokeRenderer
@@ -342,12 +345,12 @@ onMounted(load)
             :document="payload.prior_stroke_json"
           />
           <label class="block space-y-2">
-            <span class="text-sm font-medium text-slate-700">Your guess</span>
+            <span class="text-sm font-bold text-[var(--ink)]">Your guess</span>
             <input
               v-model="guess"
               type="text"
               maxlength="120"
-              class="w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-base"
+              class="chip-sketch w-full rounded-[var(--radius-chip)] bg-[var(--surface)] px-3 py-3 text-base font-medium outline-none"
               placeholder="Type your guess"
               autocomplete="off"
             >
@@ -362,7 +365,7 @@ onMounted(load)
 
       <p
         v-else-if="!expired"
-        class="text-sm text-slate-500"
+        class="text-sm font-medium text-[var(--ink-muted)]"
       >
         Loading…
       </p>
@@ -370,13 +373,13 @@ onMounted(load)
 
     <div
       v-if="payload && payload.step_type === 'guess' && !expired && !loadError"
-      class="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200/80 bg-slate-100/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-slate-100/80"
+      class="fixed inset-x-0 bottom-0 z-20 bg-[var(--paper)]/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-[var(--paper)]/85"
       style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))"
     >
       <div class="mx-auto max-w-lg">
         <button
           type="button"
-          class="w-full rounded-2xl bg-slate-900 px-4 py-4 text-base font-semibold text-white disabled:opacity-50"
+          class="btn-accent w-full !py-4 text-base disabled:opacity-50"
           :disabled="busy"
           @click="openSubmit"
         >

@@ -84,10 +84,6 @@ const sizeThumbStyle = computed(() => {
   }
 })
 
-const sizeThumbTopPct = computed(() =>
-  ((BRUSH_WIDTH_MAX - width.value) / (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)) * 100,
-)
-
 function syncCanvasSize() {
   const wrap = wrapRef.value
   const canvas = canvasRef.value
@@ -290,16 +286,11 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
         </div>
       </div>
 
-      <!--
-        Size slider: vertical rail above the dock (left), forming an L with the tool bar.
-        Sits on top of the dock band — not inside it.
-      -->
-      <div
-        class="absolute bottom-[calc(3.75rem+env(safe-area-inset-bottom,0px))] left-1 z-30 flex flex-col items-center"
-      >
+      <!-- Left size slider -->
+      <div class="absolute left-1 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center">
         <div
           v-if="sizing"
-          class="pointer-events-none absolute bottom-full mb-3 rounded-full border-2 border-[var(--ink)] bg-transparent"
+          class="pointer-events-none absolute bottom-full mb-5 rounded-full border-2 border-[var(--ink)] bg-transparent"
           :style="{
             width: `${sizePreviewPx}px`,
             height: `${sizePreviewPx}px`,
@@ -307,16 +298,9 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
         />
         <div
           ref="sliderRef"
-          class="flex h-36 w-11 touch-none items-center justify-center sm:h-40"
+          class="flex h-44 w-11 touch-none items-center justify-center"
           style="touch-action: none"
-          role="slider"
-          :aria-valuemin="BRUSH_WIDTH_MIN"
-          :aria-valuemax="BRUSH_WIDTH_MAX"
-          :aria-valuenow="width"
-          aria-orientation="vertical"
-          :aria-label="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
-          :title="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
-          @pointerdown.stop="onSliderPointerDown"
+          @pointerdown="onSliderPointerDown"
           @pointermove="onSliderPointerMove"
           @pointerup="onSliderPointerUp"
           @pointercancel="onSliderPointerUp"
@@ -325,12 +309,48 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
             <div
               class="absolute left-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--ink)]"
               :style="{
-                top: `${sizeThumbTopPct}%`,
+                top: `${((BRUSH_WIDTH_MAX - width) / (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)) * 100}%`,
                 backgroundColor: sizeThumbStyle.backgroundColor,
                 boxShadow: sizeThumbStyle.boxShadow,
               }"
             />
           </div>
+        </div>
+        <!-- Tool cue under track (icon only) -->
+        <div
+          class="pointer-events-none mt-5 text-[var(--ink)]"
+          :aria-label="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
+          :title="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
+        >
+          <svg
+            v-if="tool !== 'eraser'"
+            viewBox="0 0 24 24"
+            class="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.25"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
+            <path d="m5 12 4 4" />
+          </svg>
+          <svg
+            v-else
+            viewBox="0 0 24 24"
+            class="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.25"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
+            <path d="M22 21H7" />
+            <path d="m5 11 9 9" />
+          </svg>
         </div>
       </div>
 

@@ -57,12 +57,24 @@ const advancedOpen = ref(false)
 
 const handoff = ref<PassHandoff | null>(null)
 const subheader = ref('')
+/** Spoiler content stays hidden until the player explicitly peeks. */
+const peekOpen = ref(false)
 
 const previewDrawing = computed(() => {
   const doc = handoff.value?.drawing
   if (!doc || !doc.strokes?.length) return null
   return doc as DrawingDocument
 })
+
+const canPeek = computed(() =>
+  Boolean(previewDrawing.value || (handoff.value?.kind === 'guess' && handoff.value.guessText)),
+)
+
+const lockedHint = computed(() => (
+  handoff.value?.kind === 'guess'
+    ? 'Guess sealed — don’t flash this at the next player.'
+    : 'Drawing sealed — don’t flash this at the next player.'
+))
 
 onMounted(() => {
   if (isMock.value) {
@@ -200,7 +212,7 @@ useHead({ title: 'Who’s next? — DoodleLoop' })
         </template>
       </div>
 
-      <!-- Middle: title, tease, high-five — fills leftover height -->
+      <!-- Middle: title, locked status, share hero -->
       <div class="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 py-6">
         <header class="space-y-2 text-center">
           <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -212,71 +224,122 @@ useHead({ title: 'Who’s next? — DoodleLoop' })
         </header>
 
         <div
-          v-if="previewDrawing"
-          class="flex justify-center"
+          class="chip-sketch flex w-full max-w-sm items-start gap-3 rounded-[var(--radius-chip)] px-4 py-3"
+          role="status"
         >
-          <div
-            class="pass-preview w-[9.5rem] overflow-hidden border border-[var(--ink)] bg-[var(--canvas)] shadow-block sm:w-[10.5rem]"
+          <span
+            class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--ink)] bg-[var(--accent)] text-[var(--ink)] shadow-block"
             aria-hidden="true"
           >
-            <CanvasStrokeRenderer
-              :document="previewDrawing"
-              bare
-            />
+            <svg
+              viewBox="0 0 24 24"
+              class="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.25"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect
+                x="5"
+                y="11"
+                width="14"
+                height="10"
+                rx="2"
+              />
+              <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+            </svg>
+          </span>
+          <div class="min-w-0 flex-1 text-left">
+            <p class="text-sm font-bold tracking-tight text-[var(--ink)]">
+              Turn locked in
+            </p>
+            <p class="mt-0.5 text-xs font-medium leading-snug text-[var(--ink-muted)]">
+              {{ lockedHint }}
+            </p>
           </div>
         </div>
 
+        <div class="w-full max-w-sm">
+          <ChainShareTurn
+            :url="absoluteUrl"
+            :step-label="stepLabel"
+          />
+        </div>
+
         <div
-          v-else-if="handoff?.kind === 'guess' && handoff.guessText"
-          class="chip-sketch w-full max-w-sm rounded-[var(--radius-chip)] px-4 py-3 text-center text-sm font-semibold text-[var(--ink)]"
+          v-if="canPeek"
+          class="flex w-full max-w-sm flex-col items-center gap-3"
         >
-          “{{ handoff.guessText }}”
+          <button
+            type="button"
+            class="btn-quiet !px-2 !py-1 text-xs font-semibold"
+            :aria-expanded="peekOpen"
+            @click="peekOpen = !peekOpen"
+          >
+            {{ peekOpen ? 'Hide your turn' : 'Peek at your turn' }}
+          </button>
+
+          <div
+            v-if="peekOpen && previewDrawing"
+            class="flex justify-center"
+          >
+            <div
+              class="pass-preview w-[9.5rem] overflow-hidden border border-[var(--ink)] bg-[var(--canvas)] shadow-block sm:w-[10.5rem]"
+              aria-label="Your drawing preview"
+            >
+              <CanvasStrokeRenderer
+                :document="previewDrawing"
+                bare
+              />
+            </div>
+          </div>
+
+          <div
+            v-else-if="peekOpen && handoff?.kind === 'guess' && handoff.guessText"
+            class="chip-sketch w-full rounded-[var(--radius-chip)] px-4 py-3 text-center text-sm font-semibold text-[var(--ink)]"
+          >
+            “{{ handoff.guessText }}”
+          </div>
         </div>
       </div>
 
-      <!-- Bottom: share CTAs + quiet links -->
-      <div class="flex shrink-0 flex-col gap-3">
-        <ChainShareTurn
-          :url="absoluteUrl"
-          :step-label="stepLabel"
-        />
+      <!-- Bottom: quiet links -->
+      <div class="flex shrink-0 flex-col items-center gap-2">
+        <NuxtLink
+          :to="`/c/${slug}/reveal`"
+          class="btn-quiet !px-2 !py-1 text-xs font-semibold"
+        >
+          View the reveal
+        </NuxtLink>
 
-        <div class="flex flex-col items-center gap-2">
-          <NuxtLink
-            :to="`/c/${slug}/reveal`"
-            class="btn-quiet !px-2 !py-1 text-xs font-semibold"
+        <template v-if="showAdvanced">
+          <button
+            type="button"
+            class="btn-quiet !px-2 !py-1 text-xs"
+            @click="advancedOpen = !advancedOpen"
           >
-            View the reveal
-          </NuxtLink>
-
-          <template v-if="showAdvanced">
-            <button
-              type="button"
-              class="btn-quiet !px-2 !py-1 text-xs"
-              @click="advancedOpen = !advancedOpen"
+            {{ advancedOpen ? 'Hide advanced' : 'Advanced ▾' }}
+          </button>
+          <div
+            v-if="advancedOpen"
+            class="flex w-full flex-wrap justify-center gap-2 rounded-xl border border-dashed border-slate-400/80 bg-white/50 p-3"
+          >
+            <NuxtLink
+              v-if="token"
+              :to="`/c/${slug}/play?token=${encodeURIComponent(token)}`"
+              class="rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950"
             >
-              {{ advancedOpen ? 'Hide advanced' : 'Advanced ▾' }}
-            </button>
-            <div
-              v-if="advancedOpen"
-              class="flex w-full flex-wrap justify-center gap-2 rounded-xl border border-dashed border-slate-400/80 bg-white/50 p-3"
+              Play next step myself
+            </NuxtLink>
+            <NuxtLink
+              :to="`/c/${slug}/dev`"
+              class="rounded-xl border border-dashed border-slate-400 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-700"
             >
-              <NuxtLink
-                v-if="token"
-                :to="`/c/${slug}/play?token=${encodeURIComponent(token)}`"
-                class="rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950"
-              >
-                Play next step myself
-              </NuxtLink>
-              <NuxtLink
-                :to="`/c/${slug}/dev`"
-                class="rounded-xl border border-dashed border-slate-400 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-700"
-              >
-                Dev inspector
-              </NuxtLink>
-            </div>
-          </template>
-        </div>
+              Dev inspector
+            </NuxtLink>
+          </div>
+        </template>
       </div>
     </div>
   </main>

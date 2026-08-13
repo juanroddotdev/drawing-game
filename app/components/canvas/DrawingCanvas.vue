@@ -84,6 +84,16 @@ const sizeThumbStyle = computed(() => {
   }
 })
 
+const sizeThumbLeftPct = computed(() =>
+  ((width.value - BRUSH_WIDTH_MIN) / (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)) * 100,
+)
+
+/** Compact dock cue — scales with brush width without dominating the bar. */
+const sizeDockCuePx = computed(() => {
+  const t = (width.value - BRUSH_WIDTH_MIN) / (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)
+  return Math.round(8 + t * 14)
+})
+
 function syncCanvasSize() {
   const wrap = wrapRef.value
   const canvas = canvasRef.value
@@ -156,13 +166,13 @@ function onContextMenu(e: Event) {
   e.preventDefault()
 }
 
-function setWidthFromClientY(clientY: number) {
+function setWidthFromClientX(clientX: number) {
   const el = sliderRef.value
   if (!el) return
   const rect = el.getBoundingClientRect()
-  if (rect.height <= 0) return
-  const t = Math.min(1, Math.max(0, (clientY - rect.top) / rect.height))
-  width.value = BRUSH_WIDTH_MAX - t * (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)
+  if (rect.width <= 0) return
+  const t = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
+  width.value = BRUSH_WIDTH_MIN + t * (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)
 }
 
 function onSliderPointerDown(e: PointerEvent) {
@@ -170,12 +180,12 @@ function onSliderPointerDown(e: PointerEvent) {
   e.preventDefault()
   sizing.value = true
   sliderRef.value?.setPointerCapture(e.pointerId)
-  setWidthFromClientY(e.clientY)
+  setWidthFromClientX(e.clientX)
 }
 
 function onSliderPointerMove(e: PointerEvent) {
   if (!sizing.value) return
-  setWidthFromClientY(e.clientY)
+  setWidthFromClientX(e.clientX)
 }
 
 function onSliderPointerUp(e: PointerEvent) {
@@ -286,75 +296,23 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
         </div>
       </div>
 
-      <!-- Left size slider -->
-      <div class="absolute left-1 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center">
+      <!-- Size preview while dragging the dock slider -->
+      <div
+        v-if="sizing"
+        class="pointer-events-none absolute inset-x-0 bottom-24 z-30 flex justify-center"
+        aria-hidden="true"
+      >
         <div
-          v-if="sizing"
-          class="pointer-events-none absolute bottom-full mb-5 rounded-full border-2 border-[var(--ink)] bg-transparent"
+          class="rounded-full border-2 border-[var(--ink)] bg-transparent"
           :style="{
             width: `${sizePreviewPx}px`,
             height: `${sizePreviewPx}px`,
+            backgroundColor: `${sizeThumbColor}33`,
           }"
         />
-        <div
-          ref="sliderRef"
-          class="flex h-44 w-11 touch-none items-center justify-center"
-          style="touch-action: none"
-          @pointerdown="onSliderPointerDown"
-          @pointermove="onSliderPointerMove"
-          @pointerup="onSliderPointerUp"
-          @pointercancel="onSliderPointerUp"
-        >
-          <div class="relative h-full w-1.5 rounded-full bg-[var(--surface)] ring-2 ring-[var(--ink)]">
-            <div
-              class="absolute left-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--ink)]"
-              :style="{
-                top: `${((BRUSH_WIDTH_MAX - width) / (BRUSH_WIDTH_MAX - BRUSH_WIDTH_MIN)) * 100}%`,
-                backgroundColor: sizeThumbStyle.backgroundColor,
-                boxShadow: sizeThumbStyle.boxShadow,
-              }"
-            />
-          </div>
-        </div>
-        <!-- Tool cue under track (icon only) -->
-        <div
-          class="pointer-events-none mt-5 text-[var(--ink)]"
-          :aria-label="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
-          :title="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
-        >
-          <svg
-            v-if="tool !== 'eraser'"
-            viewBox="0 0 24 24"
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.25"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
-            <path d="m5 12 4 4" />
-          </svg>
-          <svg
-            v-else
-            viewBox="0 0 24 24"
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.25"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
-            <path d="M22 21H7" />
-            <path d="m5 11 9 9" />
-          </svg>
-        </div>
       </div>
 
-      <!-- Bottom thumb dock: Undo · Eraser · Clear · swatches -->
+      <!-- Bottom thumb dock: Undo · Eraser · Clear · size · swatches -->
       <div
         class="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[var(--paper-deep)]/80 via-transparent to-transparent px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-8"
       >
@@ -437,10 +395,64 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
               <path d="m19 6-1 14H6L5 6" />
             </svg>
           </button>
+
           <div
             class="mx-0.5 h-8 w-px shrink-0 bg-slate-300/80"
             aria-hidden="true"
           />
+
+          <!-- Brush size — horizontal, grouped with tools -->
+          <div
+            class="flex h-11 shrink-0 items-center gap-1.5 px-0.5"
+            :aria-label="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
+            :title="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
+          >
+            <span
+              class="pointer-events-none flex h-8 w-8 shrink-0 items-center justify-center"
+              aria-hidden="true"
+            >
+              <span
+                class="rounded-full border border-[var(--ink)]"
+                :style="{
+                  width: `${sizeDockCuePx}px`,
+                  height: `${sizeDockCuePx}px`,
+                  backgroundColor: sizeThumbStyle.backgroundColor,
+                  boxShadow: sizeThumbStyle.boxShadow,
+                }"
+              />
+            </span>
+            <div
+              ref="sliderRef"
+              class="flex h-11 w-[4.75rem] touch-none items-center sm:w-24"
+              style="touch-action: none"
+              role="slider"
+              :aria-valuemin="BRUSH_WIDTH_MIN"
+              :aria-valuemax="BRUSH_WIDTH_MAX"
+              :aria-valuenow="width"
+              :aria-label="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
+              @pointerdown.stop="onSliderPointerDown"
+              @pointermove="onSliderPointerMove"
+              @pointerup="onSliderPointerUp"
+              @pointercancel="onSliderPointerUp"
+            >
+              <div class="relative h-1.5 w-full rounded-full bg-[var(--paper-deep)] ring-2 ring-[var(--ink)]">
+                <div
+                  class="absolute top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--ink)]"
+                  :style="{
+                    left: `${sizeThumbLeftPct}%`,
+                    backgroundColor: sizeThumbStyle.backgroundColor,
+                    boxShadow: sizeThumbStyle.boxShadow,
+                  }"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="mx-0.5 h-8 w-px shrink-0 bg-slate-300/80"
+            aria-hidden="true"
+          />
+
           <button
             v-for="c in colors"
             :key="c"

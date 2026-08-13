@@ -286,11 +286,13 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
         </div>
       </div>
 
-      <!-- Left size slider -->
-      <div class="absolute left-1 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center">
+      <!-- Size slider: left thumb side, lower — above the dock, not inside it -->
+      <div
+        class="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] left-1 z-10 flex flex-col items-center"
+      >
         <div
           v-if="sizing"
-          class="pointer-events-none absolute bottom-full mb-5 rounded-full border-2 border-[var(--ink)] bg-transparent"
+          class="pointer-events-none absolute bottom-full mb-4 rounded-full border-2 border-[var(--ink)] bg-transparent"
           :style="{
             width: `${sizePreviewPx}px`,
             height: `${sizePreviewPx}px`,
@@ -298,7 +300,7 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
         />
         <div
           ref="sliderRef"
-          class="flex h-44 w-11 touch-none items-center justify-center"
+          class="flex h-40 w-11 touch-none items-center justify-center"
           style="touch-action: none"
           @pointerdown="onSliderPointerDown"
           @pointermove="onSliderPointerMove"
@@ -318,7 +320,7 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
         </div>
         <!-- Tool cue under track (icon only) -->
         <div
-          class="pointer-events-none mt-5 text-[var(--ink)]"
+          class="pointer-events-none mt-3 text-[var(--ink)]"
           :aria-label="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
           :title="tool === 'eraser' ? 'Eraser size' : 'Pen size'"
         >

@@ -40,29 +40,47 @@ function buildCycle(cycle: number, includeOpeningPrompt: boolean): Scene[] {
 }
 
 const BRAND_LETTERS = 'DoodleLoop'.split('')
-/** Write-on duration before CTA morph + compare prompt */
+/** Write-on duration before CTA morph */
 const BRAND_WRITE_MS = 780
 
 /** Growing timeline — after each close, the journey repeats (endless). */
 const timeline = ref<Scene[]>(buildCycle(0, true))
 const nextCycle = ref(1)
+const index = ref(0)
 
 /** Brand marks that have finished writing and become the landing CTA. */
 const brandCtaIds = ref<Record<string, true>>({})
 
-/** How many scenes are visible (1-based count). Starts with prompt only. */
-const visibleCount = ref(1)
-const cardRefs = ref<HTMLElement[]>([])
-const sentinelRef = ref<HTMLElement | null>(null)
+const scene = computed(() => timeline.value[index.value] ?? null)
+const canGoBack = computed(() => index.value > 0)
 
-const visibleScenes = computed(() => timeline.value.slice(0, visibleCount.value))
+/** One segment per beat in the active cycle. */
+const segmentCount = computed(() => {
+  const steps = props.reveal.steps.length
+  if (steps === 0) return 1
+  const s = scene.value
+  // Opening cycle includes the prompt card
+  if (!s || s.cycle === 0) return 1 + steps + 2
+  return steps + 2
+})
 
-let revealLock = false
-let scrollArmed = false
-let ignoreScrollUntil = 0
-let callbackTimer: ReturnType<typeof setTimeout> | null = null
+const segmentIndex = computed(() => {
+  const s = scene.value
+  if (!s) return 0
+  if (s.kind === 'prompt') return 0
+  if (s.kind === 'step') {
+    return s.cycle > 0 ? s.step.step_number - 1 : s.step.step_number
+  }
+  const brandIdx = s.cycle > 0
+    ? props.reveal.steps.length
+    : props.reveal.steps.length + 1
+  if (s.kind === 'brand') return brandIdx
+  return brandIdx + 1
+})
 
-/** Icons for steps 1…through (draw/guess path so far on this card). */
+let advanceLock = false
+let brandTimer: ReturnType<typeof setTimeout> | null = null
+
 function pathThrough(through: number) {
   return Array.from({ length: through }, (_, i) => ({
     n: i + 1,
@@ -70,42 +88,15 @@ function pathThrough(through: number) {
   }))
 }
 
-function setCardRef(el: Element | null, i: number) {
-  if (!el) return
-  cardRefs.value[i] = el as HTMLElement
-}
-
-function clearCallbackTimer() {
-  if (callbackTimer != null) {
-    clearTimeout(callbackTimer)
-    callbackTimer = null
+function clearBrandTimer() {
+  if (brandTimer != null) {
+    clearTimeout(brandTimer)
+    brandTimer = null
   }
 }
 
-/** Frame last guess near the top so brand + prompt can share the viewport. */
-function scrollClosingComposition(brandIndex: number) {
-  nextTick(() => {
-    const guessEl = cardRefs.value[brandIndex - 1]
-    if (guessEl) {
-      guessEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      return
-    }
-    cardRefs.value[brandIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  })
-}
-
-function scrollToCard(i: number) {
-  nextTick(() => {
-    const el = cardRefs.value[i]
-    const scene = visibleScenes.value[i]
-    if (!el || !scene) return
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  })
-}
-
-function ensureRoomToReveal() {
-  if (visibleCount.value < timeline.value.length) return
-  // Next loop starts on the first turn — callback already restated the prompt
+function ensureRoom() {
+  if (index.value < timeline.value.length - 1) return
   timeline.value = [
     ...timeline.value,
     ...buildCycle(nextCycle.value, false),
@@ -113,47 +104,47 @@ function ensureRoomToReveal() {
   nextCycle.value += 1
 }
 
-function revealCallbackQuietly() {
-  ensureRoomToReveal()
-  const next = timeline.value[visibleCount.value]
-  if (next?.kind !== 'callback') {
-    revealLock = false
-    return
+function goNext() {
+  if (advanceLock) return
+  const current = scene.value
+  if (!current) return
+
+  // Skip waiting on brand write — unlock CTA and continue
+  if (current.kind === 'brand' && !brandCtaIds.value[current.id]) {
+    clearBrandTimer()
+    brandCtaIds.value = { ...brandCtaIds.value, [current.id]: true }
   }
-  visibleCount.value += 1
-  // Stay put — last guess, DoodleLoop, and prompt should already share the view
-  ignoreScrollUntil = Date.now() + 600
+
+  advanceLock = true
+  clearBrandTimer()
+  ensureRoom()
+  index.value += 1
+  onSceneEntered()
   window.setTimeout(() => {
-    revealLock = false
-  }, 200)
+    advanceLock = false
+  }, 280)
 }
 
-function revealNext() {
-  if (revealLock) return
-  revealLock = true
-  clearCallbackTimer()
-  ensureRoomToReveal()
-  visibleCount.value += 1
-  const i = visibleCount.value - 1
-  const scene = timeline.value[i]
-  // Ignore scroll events caused by our own scrollIntoView so we don’t cascade
-  ignoreScrollUntil = Date.now() + 850
-
-  if (scene?.kind === 'brand') {
-    scrollClosingComposition(i)
-    // After write-on: become the landing CTA, then slide in the compare prompt
-    callbackTimer = setTimeout(() => {
-      callbackTimer = null
-      brandCtaIds.value = { ...brandCtaIds.value, [scene.id]: true }
-      revealCallbackQuietly()
-    }, BRAND_WRITE_MS)
-    return
-  }
-
-  scrollToCard(i)
+function goBack() {
+  if (!canGoBack.value || advanceLock) return
+  advanceLock = true
+  clearBrandTimer()
+  index.value -= 1
+  onSceneEntered()
   window.setTimeout(() => {
-    revealLock = false
-  }, 700)
+    advanceLock = false
+  }, 280)
+}
+
+function onSceneEntered() {
+  const s = scene.value
+  if (!s) return
+  if (s.kind === 'brand' && !brandCtaIds.value[s.id]) {
+    brandTimer = setTimeout(() => {
+      brandTimer = null
+      brandCtaIds.value = { ...brandCtaIds.value, [s.id]: true }
+    }, BRAND_WRITE_MS)
+  }
 }
 
 function onBrandClick(event: MouseEvent, id: string) {
@@ -162,91 +153,86 @@ function onBrandClick(event: MouseEvent, id: string) {
   }
 }
 
-/** Sentinel crossed into the lower viewport → reveal next beat. */
-function tryRevealFromScroll() {
-  if (!scrollArmed || revealLock || Date.now() < ignoreScrollUntil) return
-  const el = sentinelRef.value
-  if (!el) return
+/** Stories hit zones: left = back, right = next. Ignore interactive chrome. */
+function onStagePointer(e: PointerEvent) {
+  const target = e.target as HTMLElement | null
+  if (target?.closest('a, button, input, textarea, [data-story-chrome]')) return
+
+  const el = e.currentTarget as HTMLElement
   const rect = el.getBoundingClientRect()
-  const vh = window.innerHeight || 1
-  // Trigger when the sentinel reaches the lower ~third of the screen
-  if (rect.top < vh * 0.72 && rect.bottom > 0) {
-    revealNext()
+  const x = e.clientX - rect.left
+  if (x < rect.width * 0.28) goBack()
+  else goNext()
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault()
+    goNext()
+  }
+  else if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+    e.preventDefault()
+    goBack()
   }
 }
 
-function onScrollGesture() {
-  scrollArmed = true
-  tryRevealFromScroll()
-}
-
 onMounted(() => {
-  window.addEventListener('scroll', onScrollGesture, { passive: true })
-  window.addEventListener('touchmove', onScrollGesture, { passive: true })
-  window.addEventListener('wheel', onScrollGesture, { passive: true })
+  onSceneEntered()
+  window.addEventListener('keydown', onKeydown)
 })
 
 onBeforeUnmount(() => {
-  clearCallbackTimer()
-  window.removeEventListener('scroll', onScrollGesture)
-  window.removeEventListener('touchmove', onScrollGesture)
-  window.removeEventListener('wheel', onScrollGesture)
+  clearBrandTimer()
+  window.removeEventListener('keydown', onKeydown)
 })
 </script>
 
 <template>
-  <div class="relative flex flex-col gap-5 pb-28">
-    <!-- Growing timeline -->
-    <div class="mx-auto w-full max-w-lg">
-      <template
-        v-for="(scene, i) in visibleScenes"
-        :key="scene.id"
+  <div
+    class="story relative mx-auto flex h-full min-h-[28rem] w-full max-w-lg flex-col"
+    role="region"
+    aria-roledescription="carousel"
+    aria-label="Reveal story"
+  >
+    <!-- Progress — Stories-style segments for the loop -->
+    <div
+      class="flex shrink-0 gap-1 px-1 pb-3 pt-1"
+      data-story-chrome
+      role="img"
+      :aria-label="`Beat ${segmentIndex + 1} of ${segmentCount}`"
+    >
+      <div
+        v-for="n in segmentCount"
+        :key="n"
+        class="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--ink)]/15"
       >
         <div
-          v-if="i > 0 && scene.kind !== 'brand' && scene.kind !== 'callback'"
-          class="flex justify-center py-8 text-[var(--ink)] sm:py-10"
-          aria-hidden="true"
-        >
-          <!-- Line between earlier beats; arrow only into the latest -->
-          <svg
-            v-if="i < visibleCount - 1"
-            class="h-10 w-4"
-            viewBox="0 0 12 40"
-            fill="none"
-          >
-            <path
-              d="M7 1 C2 10, 11 18, 5 28 S8 36, 6 39"
-              stroke="currentColor"
-              stroke-width="2.25"
-              stroke-linecap="round"
-            />
-          </svg>
-          <svg
-            v-else
-            class="h-12 w-5"
-            viewBox="0 0 16 48"
-            fill="none"
-          >
-            <path
-              d="M8 2 C3 12, 13 20, 8 30 L8 30"
-              stroke="currentColor"
-              stroke-width="2.25"
-              stroke-linecap="round"
-            />
-            <path
-              d="M4 32 L8 40 L12 32"
-              stroke="currentColor"
-              stroke-width="2.25"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </div>
+          class="h-full rounded-full bg-[var(--ink)] transition-[width] duration-300 ease-out"
+          :style="{
+            width: n - 1 < segmentIndex
+              ? '100%'
+              : n - 1 === segmentIndex
+                ? '100%'
+                : '0%',
+          }"
+        />
+      </div>
+    </div>
 
+    <!-- Stage: one card + tap zones -->
+    <div
+      class="relative min-h-0 flex-1 touch-manipulation select-none"
+      @pointerup="onStagePointer"
+    >
+      <div
+        v-if="scene"
+        :key="scene.id"
+        class="story-card absolute inset-0 flex flex-col"
+      >
+        <!-- Brand -->
         <div
           v-if="scene.kind === 'brand'"
-          :ref="(el) => setCardRef(el as Element | null, i)"
-          class="reveal-card brand-beat flex items-center justify-center"
+          class="flex min-h-0 flex-1 flex-col items-center justify-center px-4"
         >
           <NuxtLink
             to="/play/new"
@@ -257,6 +243,7 @@ onBeforeUnmount(() => {
             :tabindex="brandCtaIds[scene.id] ? undefined : -1"
             :aria-disabled="brandCtaIds[scene.id] ? undefined : 'true'"
             aria-label="DoodleLoop — start a new game"
+            data-story-chrome
             @click="onBrandClick($event, scene.id)"
           >
             <span
@@ -268,10 +255,10 @@ onBeforeUnmount(() => {
           </NuxtLink>
         </div>
 
+        <!-- Callback -->
         <div
           v-else-if="scene.kind === 'callback'"
-          :ref="(el) => setCardRef(el as Element | null, i)"
-          class="reveal-card callback-beat flex items-end"
+          class="flex min-h-0 flex-1 flex-col justify-center px-1"
         >
           <div class="callback-panel panel-sketch w-full p-4 sm:p-5">
             <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
@@ -286,13 +273,13 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
+        <!-- Prompt / step -->
         <div
           v-else
-          :ref="(el) => setCardRef(el as Element | null, i)"
-          class="panel-sketch reveal-card"
+          class="panel-sketch flex min-h-0 flex-1 flex-col"
           :class="scene.kind === 'step' && scene.step.type === 'draw' && scene.step.stroke_json
             ? 'overflow-hidden p-0'
-            : 'p-4 sm:p-5'"
+            : 'justify-center p-4 sm:p-5'"
         >
           <template v-if="scene.kind === 'prompt'">
             <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
@@ -307,11 +294,11 @@ onBeforeUnmount(() => {
           </template>
 
           <template v-else-if="scene.step.type === 'draw' && scene.step.stroke_json">
-            <div class="relative">
+            <div class="relative min-h-0 flex-1">
               <CanvasReplayPlayer
-                :key="`${scene.id}-v-${visibleCount}`"
+                :key="scene.id"
                 :document="scene.step.stroke_json"
-                :autoplay="i === visibleCount - 1"
+                :autoplay="true"
                 chrome="overlay"
               />
               <div
@@ -434,54 +421,40 @@ onBeforeUnmount(() => {
             </p>
           </template>
         </div>
-      </template>
-
-      <!-- Scroll target — approaching reveals the next beat -->
-      <div
-        ref="sentinelRef"
-        class="h-32 w-full"
-        aria-hidden="true"
-      />
+      </div>
     </div>
 
-    <!-- Thumb-zone scroll cue -->
-    <button
-      type="button"
-      class="scroll-cue fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-20 flex h-12 w-12 items-center justify-center text-[var(--ink)]"
-      aria-label="Continue"
-      @click="revealNext"
+    <!-- Footer chrome -->
+    <div
+      class="flex shrink-0 items-center justify-between gap-3 pt-3"
+      data-story-chrome
+      style="padding-bottom: max(0.25rem, env(safe-area-inset-bottom))"
     >
-      <svg
-        viewBox="0 0 40 56"
-        class="h-11 w-8"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
+      <button
+        type="button"
+        class="btn-quiet !px-2 !py-1.5 text-xs font-semibold disabled:opacity-35"
+        :disabled="!canGoBack"
+        @click="goBack"
       >
-        <path d="M19.2 4.5c.4 6.2-.6 12.8.3 19.2.5 3.6-.2 7.4.4 11.1.3 2.1.1 4.2-.1 6.2" />
-        <path d="M8.5 32.8c3.8 2.6 7.4 5.8 10.6 9.4 1.2-3.4 3.1-6.6 5.4-9.5" />
-        <path
-          d="M19.5 42.8c1.1 2.8 1.8 5.6 2.1 8.4"
-          stroke-width="1.7"
-          opacity="0.55"
-        />
-      </svg>
-    </button>
+        Back
+      </button>
+      <p class="text-center text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+        Tap to continue
+      </p>
+      <button
+        type="button"
+        class="btn-accent !px-3 !py-1.5 text-xs"
+        @click="goNext"
+      >
+        Next
+      </button>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.reveal-card {
-  scroll-margin-top: 1.5rem;
-  scroll-margin-bottom: 7rem;
-}
-
-/* Closing beat: last guess near top, DoodleLoop mid, prompt in the same view */
-.brand-beat {
-  min-height: 30dvh;
+.story-card {
+  animation: story-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .brand-write {
@@ -501,7 +474,6 @@ onBeforeUnmount(() => {
   box-shadow: none;
 }
 
-/* Same chrome as landing hero CTA — pops on after the write */
 .brand-write--cta {
   animation: brand-cta-pop 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
@@ -515,25 +487,19 @@ onBeforeUnmount(() => {
   animation-delay: calc(var(--i) * 0.055s);
 }
 
-.callback-beat {
-  min-height: 0;
-  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-}
-
 .callback-panel {
-  opacity: 0;
-  transform: translateY(2.75rem);
-  animation: callback-rise 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: callback-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.scroll-cue {
-  opacity: 0.55;
-  animation: cue-bob 1.4s ease-in-out infinite;
-}
-
-.scroll-cue:hover,
-.scroll-cue:focus-visible {
-  opacity: 0.9;
+@keyframes story-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.6rem) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @keyframes brand-write-ch {
@@ -560,37 +526,25 @@ onBeforeUnmount(() => {
 }
 
 @keyframes callback-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-@keyframes cue-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(0.35rem);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .brand-write--cta {
-    animation: none;
-  }
-
+  .story-card,
+  .brand-write--cta,
   .brand-write__ch,
   .callback-panel {
     animation: none;
     opacity: 1;
     clip-path: none;
     transform: none;
-  }
-
-  .scroll-cue {
-    animation: none;
   }
 }
 </style>

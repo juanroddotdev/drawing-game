@@ -25,10 +25,13 @@ onMounted(load)
 </script>
 
 <template>
-  <main class="bg-dot-grid min-h-dvh px-4 py-8 text-[var(--ink)]">
-    <div class="mx-auto flex max-w-lg flex-col gap-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
-      <header class="space-y-1 text-center">
-        <div class="flex justify-center gap-3 text-sm">
+  <main class="bg-dot-grid flex min-h-dvh flex-col px-4 text-[var(--ink)]">
+    <div
+      class="mx-auto flex w-full max-w-lg flex-1 flex-col gap-3"
+      style="padding-top: max(0.75rem, env(safe-area-inset-top)); padding-bottom: max(0.5rem, env(safe-area-inset-bottom))"
+    >
+      <header class="flex shrink-0 items-center justify-between gap-3">
+        <div class="flex gap-2 text-sm">
           <NuxtLink
             to="/"
             class="btn-quiet !px-1 !py-1"
@@ -42,7 +45,7 @@ onMounted(load)
             Loop status
           </NuxtLink>
         </div>
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 class="text-sm font-bold tracking-tight text-[var(--ink-muted)]">
           The reveal
         </h1>
       </header>
@@ -59,6 +62,7 @@ onMounted(load)
 
       <ChainRevealGallery
         v-else-if="reveal"
+        class="min-h-0 flex-1"
         :reveal="reveal"
       />
 

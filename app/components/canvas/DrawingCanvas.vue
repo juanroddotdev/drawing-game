@@ -356,112 +356,107 @@ defineExpose({ clear, undo, canUndo, syncCanvasSize })
         </div>
       </div>
 
-      <!-- Bottom thumb dock: compact tools · flexible swatches (no scroll) -->
+      <!-- Bottom thumb dock: Undo · Eraser · Clear · swatches -->
       <div
         class="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[var(--paper-deep)]/80 via-transparent to-transparent px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-8"
       >
         <div
-          class="dock-sketch pointer-events-auto flex w-full items-center gap-1 p-1"
+          class="dock-sketch pointer-events-auto flex w-full items-center gap-1.5 overflow-x-auto p-1.5"
+          style="-webkit-overflow-scrolling: touch"
         >
-          <div class="flex shrink-0 items-center gap-0.5">
-            <button
-              type="button"
-              class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-800 disabled:opacity-35"
-              :disabled="disabled || !canUndo"
-              aria-label="Undo last stroke"
-              title="Undo"
-              @pointerdown.stop
-              @click="undo"
+          <button
+            type="button"
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-800 disabled:opacity-35"
+            :disabled="disabled || !canUndo"
+            aria-label="Undo last stroke"
+            title="Undo"
+            @pointerdown.stop
+            @click="undo"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              <svg
-                viewBox="0 0 24 24"
-                class="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M9 14 4 9l5-5" />
-                <path d="M4 9h10a6 6 0 0 1 0 12h-3" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              class="flex h-9 w-9 items-center justify-center rounded-lg"
-              :class="tool === 'eraser'
-                ? 'bg-[var(--ink)] text-white'
-                : 'text-[var(--ink)]'"
-              :disabled="disabled"
-              aria-label="Eraser"
-              title="Eraser"
-              @pointerdown.stop
-              @click="tool = tool === 'eraser' ? 'pen' : 'eraser'"
+              <path d="M9 14 4 9l5-5" />
+              <path d="M4 9h10a6 6 0 0 1 0 12h-3" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+            :class="tool === 'eraser'
+              ? 'bg-[var(--ink)] text-white'
+              : 'text-[var(--ink)]'"
+            :disabled="disabled"
+            aria-label="Eraser"
+            title="Eraser"
+            @pointerdown.stop
+            @click="tool = tool === 'eraser' ? 'pen' : 'eraser'"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              <svg
-                viewBox="0 0 24 24"
-                class="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
-                <path d="M22 21H7" />
-                <path d="m5 11 9 9" />
-              </svg>
-            </button>
-            <button
-              ref="clearBtnRef"
-              type="button"
-              class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500"
-              :disabled="disabled"
-              aria-label="Clear drawing"
-              title="Clear"
-              @pointerdown.stop
-              @click="requestClear"
+              <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
+              <path d="M22 21H7" />
+              <path d="m5 11 9 9" />
+            </svg>
+          </button>
+          <button
+            ref="clearBtnRef"
+            type="button"
+            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500"
+            :disabled="disabled"
+            aria-label="Clear drawing"
+            title="Clear"
+            @pointerdown.stop
+            @click="requestClear"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              class="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
-              <svg
-                viewBox="0 0 24 24"
-                class="h-3.5 w-3.5"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M3 6h18" />
-                <path d="M8 6V4h8v2" />
-                <path d="m19 6-1 14H6L5 6" />
-              </svg>
-            </button>
-          </div>
-
+              <path d="M3 6h18" />
+              <path d="M8 6V4h8v2" />
+              <path d="m19 6-1 14H6L5 6" />
+            </svg>
+          </button>
           <div
-            class="mx-0.5 h-7 w-px shrink-0 bg-slate-300/80"
+            class="mx-0.5 h-8 w-px shrink-0 bg-slate-300/80"
             aria-hidden="true"
           />
-
-          <div class="flex min-w-0 flex-1 items-center gap-1">
-            <button
-              v-for="c in colors"
-              :key="c"
-              type="button"
-              class="aspect-square h-8 min-w-0 flex-1 max-w-9 rounded-full border-2 transition"
-              :class="color === c && tool === 'pen'
-                ? 'border-[var(--ink)] scale-105 shadow-block'
-                : 'border-[var(--ink)]/30'"
-              :style="{ backgroundColor: c }"
-              :aria-label="`Color ${c}`"
-              :disabled="disabled"
-              @pointerdown.stop
-              @click="tool = 'pen'; color = c"
-            />
-          </div>
+          <button
+            v-for="c in colors"
+            :key="c"
+            type="button"
+            class="h-10 w-10 shrink-0 rounded-full border-2 transition"
+            :class="color === c && tool === 'pen'
+              ? 'border-[var(--ink)] scale-105 shadow-block'
+              : 'border-[var(--ink)]/30'"
+            :style="{ backgroundColor: c }"
+            :aria-label="`Color ${c}`"
+            :disabled="disabled"
+            @pointerdown.stop
+            @click="tool = 'pen'; color = c"
+          />
         </div>
       </div>
     </div>

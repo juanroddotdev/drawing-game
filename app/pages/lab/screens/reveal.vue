@@ -12,29 +12,18 @@ useHead({ title: 'Reveal — lab' })
 </script>
 
 <template>
-  <main class="bg-dot-grid min-h-dvh px-4 py-8 text-[var(--ink)]">
-    <div class="mx-auto flex max-w-lg flex-col gap-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
-      <header class="space-y-1 text-center">
-        <div class="flex justify-center gap-3 text-sm">
-          <NuxtLink
-            to="/"
-            class="btn-quiet !px-1 !py-1"
-          >
-            Home
-          </NuxtLink>
-          <NuxtLink
-            to="/c/lab"
-            class="btn-quiet !px-1 !py-1"
-          >
-            Loop status
-          </NuxtLink>
-        </div>
-        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">
-          The reveal
-        </h1>
-      </header>
-
-      <ChainRevealGallery :reveal="reveal" />
+  <main class="bg-dot-grid flex min-h-dvh flex-col px-4 text-[var(--ink)]">
+    <h1 class="sr-only">
+      The reveal
+    </h1>
+    <div
+      class="mx-auto flex w-full max-w-lg flex-1 flex-col"
+      style="padding-top: max(0.75rem, env(safe-area-inset-top)); padding-bottom: max(0.5rem, env(safe-area-inset-bottom))"
+    >
+      <ChainRevealGallery
+        class="min-h-0 flex-1"
+        :reveal="reveal"
+      />
     </div>
   </main>
 </template>

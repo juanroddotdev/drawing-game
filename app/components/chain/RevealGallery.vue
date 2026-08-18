@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { RevealPayload, RevealStep, StepType } from '~/types/chain'
 import { stepTypeForNumber } from '~/types/chain'
+import { snapEase, travelToDrawT } from '~/utils/revealDrawGesture'
 
 const props = defineProps<{
   reveal: RevealPayload
@@ -15,6 +16,10 @@ type SceneKind =
 type Scene = SceneKind & {
   cycle: number
   id: string
+}
+
+function isDrawScene(s: Scene | null | undefined): s is Scene & { kind: 'step', step: RevealStep } {
+  return Boolean(s && s.kind === 'step' && s.step.type === 'draw' && s.step.stroke_json)
 }
 
 function buildCycle(cycle: number, includeOpeningPrompt: boolean): Scene[] {
@@ -101,11 +106,16 @@ const SNAP_MS = 320
 const SWIPE_PX = 56
 const SWIPE_VX = 0.4
 
+/** Incoming incomplete draw — follows card travel. Completed draws stay at 1. */
+const drawT = ref(0)
+const completedDrawIds = ref<Record<string, true>>({})
+
 let pointerId: number | null = null
 let startX = 0
 let startY = 0
 let startT = 0
 let axis: 'undecided' | 'x' | 'y' = 'undecided'
+let drawRaf = 0
 
 const peekScene = computed(() => {
   if (snapDir.value === 'next' || dragX.value < -6) {
@@ -133,6 +143,28 @@ const layers = computed(() => {
   list.push({ id: current.id, scene: current, x: dragX.value, current: true })
   return list
 })
+
+function isDrawDone(s: Scene | null | undefined) {
+  return Boolean(s && completedDrawIds.value[s.id])
+}
+
+function incomingToward(): 'next' | 'back' | null {
+  if (snapDir.value === 'next' || dragX.value < -6) return 'next'
+  if ((snapDir.value === 'back' || dragX.value > 6) && index.value > 0) return 'back'
+  return null
+}
+
+function incomingScene(toward: 'next' | 'back' | null) {
+  if (toward === 'next') return timeline.value[index.value + 1] ?? null
+  if (toward === 'back') return timeline.value[index.value - 1] ?? null
+  return null
+}
+
+function progressForLayer(layer: { scene: Scene, current: boolean }) {
+  if (!isDrawScene(layer.scene)) return 0
+  if (isDrawDone(layer.scene)) return 1
+  return drawT.value
+}
 
 function measureStage() {
   stageW.value = stageRef.value?.clientWidth || 1
@@ -166,6 +198,60 @@ function prefersReducedMotion() {
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+function clearDrawAnim() {
+  if (drawRaf) {
+    cancelAnimationFrame(drawRaf)
+    drawRaf = 0
+  }
+}
+
+function markCurrentDrawDone() {
+  const s = scene.value
+  if (!isDrawScene(s)) return
+  completedDrawIds.value = { ...completedDrawIds.value, [s.id]: true }
+  drawT.value = 1
+}
+
+function syncDrawFromTravel() {
+  const toward = incomingToward()
+  const incoming = incomingScene(toward)
+  if (!isDrawScene(incoming) || isDrawDone(incoming)) return
+  drawT.value = travelToDrawT(dragX.value, stageW.value, toward)
+}
+
+function drawSnapTarget(commit: 'next' | 'back' | null): 0 | 1 | null {
+  if (commit === 'next' || commit === 'back') {
+    const incoming = incomingScene(commit)
+    if (isDrawScene(incoming) && !isDrawDone(incoming)) return 1
+    return null
+  }
+  const toward = incomingToward()
+  const incoming = incomingScene(toward)
+  if (isDrawScene(incoming) && !isDrawDone(incoming)) return 0
+  return null
+}
+
+function animateDrawTo(to: 0 | 1) {
+  const from = drawT.value
+  if (Math.abs(from - to) < 0.001) {
+    drawT.value = to
+    return
+  }
+  const start = performance.now()
+  const step = (now: number) => {
+    const u = Math.min(1, (now - start) / SNAP_MS)
+    drawT.value = from + (to - from) * snapEase(u)
+    if (u < 1) {
+      drawRaf = requestAnimationFrame(step)
+      return
+    }
+    drawT.value = to
+    drawRaf = 0
+  }
+  clearDrawAnim()
+  drawRaf = requestAnimationFrame(step)
+}
+
 function commitNext() {
   const current = scene.value
   if (current?.kind === 'brand' && !brandCtaIds.value[current.id]) {
@@ -175,6 +261,7 @@ function commitNext() {
   clearBrandTimer()
   ensureRoom()
   index.value += 1
+  markCurrentDrawDone()
   onSceneEntered()
 }
 
@@ -182,6 +269,7 @@ function commitBack() {
   if (!canGoBack.value) return
   clearBrandTimer()
   index.value -= 1
+  markCurrentDrawDone()
   onSceneEntered()
 }
 
@@ -191,18 +279,27 @@ function snapTo(dir: 'next' | 'back' | null) {
   if (dir === 'next') ensureRoom()
   measureStage()
 
+  const commit = dir
+  const toward = dir ?? (dragX.value < -6 ? 'next' : dragX.value > 6 ? 'back' : null)
+  const drawTo = drawSnapTarget(commit)
+
   if (prefersReducedMotion() || stageW.value < 8) {
-    if (dir === 'next') commitNext()
-    else if (dir === 'back') commitBack()
+    if (drawTo != null) drawT.value = drawTo
+    if (commit === 'next') commitNext()
+    else if (commit === 'back') commitBack()
+    else drawT.value = 0
     dragX.value = 0
     snapDir.value = null
     dragging.value = false
     return
   }
 
-  const commit = dir
-  snapDir.value = dir ?? (dragX.value < -6 ? 'next' : dragX.value > 6 ? 'back' : null)
+  snapDir.value = toward
   dragging.value = false
+  if (drawTo === 1) {
+    const travelDir = commit === 'back' || toward === 'back' ? 'back' : 'next'
+    drawT.value = travelToDrawT(dragX.value, stageW.value, travelDir)
+  }
   nextTick(() => {
     snapping.value = true
     dragX.value = commit === 'next'
@@ -210,10 +307,14 @@ function snapTo(dir: 'next' | 'back' | null) {
       : commit === 'back'
         ? stageW.value
         : 0
+    if (drawTo != null) animateDrawTo(drawTo)
     clearSnapTimer()
     snapTimer = setTimeout(() => {
+      clearDrawAnim()
+      if (drawTo != null) drawT.value = drawTo
       if (commit === 'next') commitNext()
       else if (commit === 'back') commitBack()
+      else drawT.value = 0
       dragX.value = 0
       snapDir.value = null
       snapping.value = false
@@ -268,6 +369,7 @@ function onPointerMove(e: PointerEvent) {
   let x = dx
   if (x > 0 && !canGoBack.value) x *= 0.22
   dragX.value = x
+  syncDrawFromTravel()
 }
 
 function onPointerUp(e: PointerEvent) {
@@ -309,6 +411,7 @@ function onPointerUp(e: PointerEvent) {
 function onSceneEntered() {
   const s = scene.value
   if (!s) return
+  if (isDrawScene(s)) markCurrentDrawDone()
   if (s.kind === 'brand' && !brandCtaIds.value[s.id]) {
     brandTimer = setTimeout(() => {
       brandTimer = null
@@ -344,6 +447,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   clearBrandTimer()
   clearSnapTimer()
+  clearDrawAnim()
   window.removeEventListener('keydown', onKeydown)
   window.removeEventListener('resize', measureStage)
 })
@@ -356,6 +460,20 @@ onBeforeUnmount(() => {
     aria-roledescription="carousel"
     aria-label="Reveal story"
   >
+    <!-- Wordmark — home -->
+    <header
+      class="flex shrink-0 justify-center pb-2 pt-0.5"
+      data-story-chrome
+    >
+      <NuxtLink
+        to="/"
+        class="font-sketch text-xl font-bold leading-none tracking-tight text-[var(--ink)]"
+        aria-label="DoodleLoop — home"
+      >
+        DoodleLoop
+      </NuxtLink>
+    </header>
+
     <!-- Progress — all slots visible; fill in as the story advances -->
     <div
       class="flex min-h-11 w-full shrink-0 items-center justify-center px-1 pb-3 pt-1"
@@ -546,7 +664,8 @@ onBeforeUnmount(() => {
             :key="layer.scene.id"
             class="absolute inset-0 h-full w-full"
             :document="layer.scene.step.stroke_json"
-            :autoplay="layer.current"
+            :progress="progressForLayer(layer)"
+            :autoplay="false"
             chrome="overlay"
           />
           <p
@@ -586,22 +705,46 @@ onBeforeUnmount(() => {
     >
       <button
         type="button"
-        class="btn-quiet !px-2 !py-1.5 text-xs font-semibold disabled:opacity-35"
+        class="btn-quiet flex size-10 items-center justify-center !p-0 disabled:opacity-35"
         :disabled="!canGoBack || snapping"
+        aria-label="Back"
         @click="goBack"
       >
-        Back
+        <svg
+          viewBox="0 0 24 24"
+          class="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.25"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m15 6-6 6 6 6" />
+        </svg>
       </button>
       <p class="text-center text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
-        Swipe
+        Swipe to reveal
       </p>
       <button
         type="button"
-        class="btn-accent !px-3 !py-1.5 text-xs"
+        class="btn-accent flex size-10 items-center justify-center !p-0"
         :disabled="snapping"
+        aria-label="Next"
         @click="goNext"
       >
-        Next
+        <svg
+          viewBox="0 0 24 24"
+          class="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.25"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m9 6 6 6-6 6" />
+        </svg>
       </button>
     </div>
   </div>

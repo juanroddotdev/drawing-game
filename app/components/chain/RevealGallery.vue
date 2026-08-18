@@ -87,13 +87,68 @@ const pathNodes = computed(() => {
   })
 })
 
-let advanceLock = false
 let brandTimer: ReturnType<typeof setTimeout> | null = null
+let snapTimer: ReturnType<typeof setTimeout> | null = null
+
+const stageRef = ref<HTMLElement | null>(null)
+const stageW = ref(1)
+const dragX = ref(0)
+const dragging = ref(false)
+const snapping = ref(false)
+const snapDir = ref<'next' | 'back' | null>(null)
+
+const SNAP_MS = 320
+const SWIPE_PX = 56
+const SWIPE_VX = 0.4
+
+let pointerId: number | null = null
+let startX = 0
+let startY = 0
+let startT = 0
+let axis: 'undecided' | 'x' | 'y' = 'undecided'
+
+const peekScene = computed(() => {
+  if (snapDir.value === 'next' || dragX.value < -6) {
+    return timeline.value[index.value + 1] ?? null
+  }
+  if ((snapDir.value === 'back' || dragX.value > 6) && index.value > 0) {
+    return timeline.value[index.value - 1] ?? null
+  }
+  return null
+})
+
+const peekX = computed(() => {
+  const w = stageW.value
+  if (snapDir.value === 'back' || dragX.value > 6) return -w + dragX.value
+  return w + dragX.value
+})
+
+const layers = computed(() => {
+  const current = scene.value
+  if (!current) return []
+  const list: Array<{ id: string, scene: Scene, x: number, current: boolean }> = []
+  if (peekScene.value) {
+    list.push({ id: peekScene.value.id, scene: peekScene.value, x: peekX.value, current: false })
+  }
+  list.push({ id: current.id, scene: current, x: dragX.value, current: true })
+  return list
+})
+
+function measureStage() {
+  stageW.value = stageRef.value?.clientWidth || 1
+}
 
 function clearBrandTimer() {
   if (brandTimer != null) {
     clearTimeout(brandTimer)
     brandTimer = null
+  }
+}
+
+function clearSnapTimer() {
+  if (snapTimer != null) {
+    clearTimeout(snapTimer)
+    snapTimer = null
   }
 }
 
@@ -106,36 +161,149 @@ function ensureRoom() {
   nextCycle.value += 1
 }
 
-function goNext() {
-  if (advanceLock) return
-  const current = scene.value
-  if (!current) return
+function prefersReducedMotion() {
+  return typeof window !== 'undefined'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
 
-  // Skip waiting on brand write — unlock CTA and continue
-  if (current.kind === 'brand' && !brandCtaIds.value[current.id]) {
+function commitNext() {
+  const current = scene.value
+  if (current?.kind === 'brand' && !brandCtaIds.value[current.id]) {
     clearBrandTimer()
     brandCtaIds.value = { ...brandCtaIds.value, [current.id]: true }
   }
-
-  advanceLock = true
   clearBrandTimer()
   ensureRoom()
   index.value += 1
   onSceneEntered()
-  window.setTimeout(() => {
-    advanceLock = false
-  }, 280)
 }
 
-function goBack() {
-  if (!canGoBack.value || advanceLock) return
-  advanceLock = true
+function commitBack() {
+  if (!canGoBack.value) return
   clearBrandTimer()
   index.value -= 1
   onSceneEntered()
-  window.setTimeout(() => {
-    advanceLock = false
-  }, 280)
+}
+
+function snapTo(dir: 'next' | 'back' | null) {
+  if (snapping.value) return
+  if (dir === 'back' && !canGoBack.value) return
+  if (dir === 'next') ensureRoom()
+  measureStage()
+
+  if (prefersReducedMotion() || stageW.value < 8) {
+    if (dir === 'next') commitNext()
+    else if (dir === 'back') commitBack()
+    dragX.value = 0
+    snapDir.value = null
+    dragging.value = false
+    return
+  }
+
+  const commit = dir
+  snapDir.value = dir ?? (dragX.value < -6 ? 'next' : dragX.value > 6 ? 'back' : null)
+  dragging.value = false
+  nextTick(() => {
+    snapping.value = true
+    dragX.value = commit === 'next'
+      ? -stageW.value
+      : commit === 'back'
+        ? stageW.value
+        : 0
+    clearSnapTimer()
+    snapTimer = setTimeout(() => {
+      if (commit === 'next') commitNext()
+      else if (commit === 'back') commitBack()
+      dragX.value = 0
+      snapDir.value = null
+      snapping.value = false
+      dragging.value = false
+      axis = 'undecided'
+    }, SNAP_MS)
+  })
+}
+
+function goNext() {
+  snapTo('next')
+}
+
+function goBack() {
+  snapTo('back')
+}
+
+function isChromeTarget(target: EventTarget | null) {
+  return Boolean((target as HTMLElement | null)?.closest('a, button, input, textarea, [data-story-chrome]'))
+}
+
+function onPointerDown(e: PointerEvent) {
+  if (e.button !== 0) return
+  if (snapping.value || isChromeTarget(e.target)) return
+  measureStage()
+  ensureRoom()
+  pointerId = e.pointerId
+  startX = e.clientX
+  startY = e.clientY
+  startT = performance.now()
+  axis = 'undecided'
+  dragging.value = false
+  try {
+    stageRef.value?.setPointerCapture(e.pointerId)
+  }
+  catch {
+    /* ignore */
+  }
+}
+
+function onPointerMove(e: PointerEvent) {
+  if (pointerId !== e.pointerId || snapping.value) return
+  const dx = e.clientX - startX
+  const dy = e.clientY - startY
+  if (axis === 'undecided') {
+    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
+    axis = Math.abs(dx) > Math.abs(dy) * 1.15 ? 'x' : 'y'
+    if (axis === 'x') dragging.value = true
+  }
+  if (axis !== 'x') return
+  e.preventDefault()
+  let x = dx
+  if (x > 0 && !canGoBack.value) x *= 0.22
+  dragX.value = x
+}
+
+function onPointerUp(e: PointerEvent) {
+  if (pointerId !== e.pointerId) return
+  pointerId = null
+  try {
+    stageRef.value?.releasePointerCapture(e.pointerId)
+  }
+  catch {
+    /* ignore */
+  }
+
+  const dx = dragX.value
+  const dt = Math.max(1, performance.now() - startT)
+  const vx = (e.clientX - startX) / dt
+  const wasDrag = dragging.value && axis === 'x'
+
+  if (!wasDrag) {
+    dragX.value = 0
+    dragging.value = false
+    axis = 'undecided'
+    if (isChromeTarget(e.target)) return
+    if (Math.abs(e.clientX - startX) < 10 && Math.abs(e.clientY - startY) < 10) {
+      const rect = stageRef.value?.getBoundingClientRect()
+      if (!rect) return
+      if (e.clientX - rect.left < rect.width * 0.28) goBack()
+      else goNext()
+    }
+    return
+  }
+
+  const goFwd = dx < -SWIPE_PX || vx < -SWIPE_VX
+  const goBwd = canGoBack.value && (dx > SWIPE_PX || vx > SWIPE_VX)
+  if (goFwd) snapTo('next')
+  else if (goBwd) snapTo('back')
+  else snapTo(null)
 }
 
 function onSceneEntered() {
@@ -155,18 +323,6 @@ function onBrandClick(event: MouseEvent, id: string) {
   }
 }
 
-/** Stories hit zones: left = back, right = next. Ignore interactive chrome. */
-function onStagePointer(e: PointerEvent) {
-  const target = e.target as HTMLElement | null
-  if (target?.closest('a, button, input, textarea, [data-story-chrome]')) return
-
-  const el = e.currentTarget as HTMLElement
-  const rect = el.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  if (x < rect.width * 0.28) goBack()
-  else goNext()
-}
-
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
     e.preventDefault()
@@ -180,12 +336,16 @@ function onKeydown(e: KeyboardEvent) {
 
 onMounted(() => {
   onSceneEntered()
+  measureStage()
   window.addEventListener('keydown', onKeydown)
+  window.addEventListener('resize', measureStage)
 })
 
 onBeforeUnmount(() => {
   clearBrandTimer()
+  clearSnapTimer()
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('resize', measureStage)
 })
 </script>
 
@@ -303,36 +463,42 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- Stage: one card + tap zones -->
+    <!-- Stage: swipe + tap -->
     <div
-      class="relative min-h-0 flex-1 touch-manipulation select-none"
-      @pointerup="onStagePointer"
+      ref="stageRef"
+      class="relative min-h-0 flex-1 touch-pan-y select-none overflow-hidden"
+      @pointerdown="onPointerDown"
+      @pointermove="onPointerMove"
+      @pointerup="onPointerUp"
+      @pointercancel="onPointerUp"
     >
       <div
-        v-if="scene"
-        :key="scene.id"
-        class="story-card absolute inset-0 flex items-center justify-center"
+        v-for="layer in layers"
+        :key="layer.id"
+        class="story-slide absolute inset-0 flex items-center justify-center"
+        :class="{ 'story-slide--snap': snapping && !dragging }"
+        :style="{ transform: `translate3d(${layer.x}px, 0, 0)` }"
       >
         <!-- Brand -->
         <div
-          v-if="scene.kind === 'brand'"
+          v-if="layer.scene.kind === 'brand'"
           class="flex items-center justify-center px-4"
         >
           <NuxtLink
             to="/play/new"
             class="font-sketch text-4xl font-bold leading-none tracking-tight sm:text-5xl"
-            :class="brandCtaIds[scene.id]
+            :class="brandCtaIds[layer.scene.id]
               ? 'brand-write brand-write--cta btn-accent !px-6 !py-4 sm:!px-8 sm:!py-5'
               : 'brand-write brand-write--plain'"
-            :tabindex="brandCtaIds[scene.id] ? undefined : -1"
-            :aria-disabled="brandCtaIds[scene.id] ? undefined : 'true'"
+            :tabindex="brandCtaIds[layer.scene.id] ? undefined : -1"
+            :aria-disabled="brandCtaIds[layer.scene.id] ? undefined : 'true'"
             aria-label="DoodleLoop — start a new game"
             data-story-chrome
-            @click="onBrandClick($event, scene.id)"
+            @click="onBrandClick($event, layer.scene.id)"
           >
             <span
               v-for="(ch, li) in BRAND_LETTERS"
-              :key="`${scene.id}-${li}`"
+              :key="`${layer.scene.id}-${li}`"
               class="brand-write__ch"
               :style="{ '--i': li }"
             >{{ ch }}</span>
@@ -341,7 +507,7 @@ onBeforeUnmount(() => {
 
         <!-- Callback -->
         <div
-          v-else-if="scene.kind === 'callback'"
+          v-else-if="layer.scene.kind === 'callback'"
           class="callback-panel panel-sketch w-full p-4 sm:p-5"
         >
           <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
@@ -357,7 +523,7 @@ onBeforeUnmount(() => {
 
         <!-- Prompt -->
         <div
-          v-else-if="scene.kind === 'prompt'"
+          v-else-if="layer.scene.kind === 'prompt'"
           class="panel-sketch w-full p-4 sm:p-5"
         >
           <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
@@ -373,40 +539,40 @@ onBeforeUnmount(() => {
 
         <!-- Draw -->
         <div
-          v-else-if="scene.step.type === 'draw' && scene.step.stroke_json"
+          v-else-if="layer.scene.kind === 'step' && layer.scene.step.type === 'draw' && layer.scene.step.stroke_json"
           class="panel-sketch relative aspect-square h-full max-h-full w-auto max-w-full overflow-hidden p-0"
         >
           <CanvasReplayPlayer
-            :key="scene.id"
+            :key="layer.scene.id"
             class="absolute inset-0 h-full w-full"
-            :document="scene.step.stroke_json"
-            :autoplay="true"
+            :document="layer.scene.step.stroke_json"
+            :autoplay="layer.current"
             chrome="overlay"
           />
           <p
-            v-if="scene.step.author_nickname"
+            v-if="layer.scene.step.author_nickname"
             class="pointer-events-none absolute right-2.5 top-2.5 z-10 rounded-sm bg-[var(--surface)]/70 px-1.5 py-0.5 text-xs font-semibold text-[var(--ink)]"
           >
-            {{ scene.step.author_nickname }}
+            {{ layer.scene.step.author_nickname }}
           </p>
         </div>
 
         <!-- Guess -->
         <div
-          v-else
+          v-else-if="layer.scene.kind === 'step'"
           class="panel-sketch relative w-full p-4 sm:p-5"
         >
           <p
-            v-if="scene.step.author_nickname"
+            v-if="layer.scene.step.author_nickname"
             class="absolute right-2.5 top-2.5 text-xs font-semibold text-[var(--ink-muted)]"
           >
-            {{ scene.step.author_nickname }}
+            {{ layer.scene.step.author_nickname }}
           </p>
           <p
-            v-if="scene.step.guess_text"
+            v-if="layer.scene.step.guess_text"
             class="px-6 py-8 text-center text-2xl font-bold leading-snug text-[var(--ink)] sm:text-3xl"
           >
-            “{{ scene.step.guess_text }}”
+            “{{ layer.scene.step.guess_text }}”
           </p>
         </div>
       </div>
@@ -421,17 +587,18 @@ onBeforeUnmount(() => {
       <button
         type="button"
         class="btn-quiet !px-2 !py-1.5 text-xs font-semibold disabled:opacity-35"
-        :disabled="!canGoBack"
+        :disabled="!canGoBack || snapping"
         @click="goBack"
       >
         Back
       </button>
       <p class="text-center text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
-        Tap to continue
+        Swipe
       </p>
       <button
         type="button"
         class="btn-accent !px-3 !py-1.5 text-xs"
+        :disabled="snapping"
         @click="goNext"
       >
         Next
@@ -441,8 +608,12 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.story-card {
-  animation: story-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+.story-slide {
+  will-change: transform;
+}
+
+.story-slide--snap {
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .brand-write {
@@ -477,17 +648,6 @@ onBeforeUnmount(() => {
 
 .callback-panel {
   animation: callback-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes story-in {
-  from {
-    opacity: 0;
-    transform: translateY(0.6rem) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 @keyframes brand-write-ch {
@@ -525,7 +685,10 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .story-card,
+  .story-slide--snap {
+    transition: none;
+  }
+
   .brand-write--cta,
   .brand-write__ch,
   .callback-panel {

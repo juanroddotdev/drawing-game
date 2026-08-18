@@ -66,20 +66,26 @@ const pathProgress = computed(() => {
   return max
 })
 
-const pathNodes = computed(() =>
-  Array.from({ length: props.reveal.steps.length }, (_, i) => {
+const pathNodes = computed(() => {
+  const max = props.reveal.steps.length
+  const progress = pathProgress.value
+  const complete = scene.value?.kind === 'brand' || scene.value?.kind === 'callback'
+  return Array.from({ length: max }, (_, i) => {
     const n = i + 1
+    const done = complete || n < progress
+    const latest = !complete && n === progress && scene.value?.kind === 'step'
+    const next = !complete && (
+      (progress === 0 && n === 1) || (progress > 0 && n === progress + 1)
+    )
     return {
       n,
       type: stepTypeForNumber(n) as StepType,
-      visible: n <= pathProgress.value,
-      done: n < pathProgress.value || (n === pathProgress.value && (scene.value?.kind === 'brand' || scene.value?.kind === 'callback')),
-      latest: n === pathProgress.value && scene.value?.kind === 'step',
+      done,
+      latest,
+      next,
     }
-  }),
-)
-
-const visiblePathNodes = computed(() => pathNodes.value.filter(n => n.visible))
+  })
+})
 
 let advanceLock = false
 let brandTimer: ReturnType<typeof setTimeout> | null = null
@@ -190,34 +196,31 @@ onBeforeUnmount(() => {
     aria-roledescription="carousel"
     aria-label="Reveal story"
   >
-    <!-- Progress — circle path grows left → right like a fill bar -->
+    <!-- Progress — all slots visible; fill in as the story advances -->
     <div
       class="flex min-h-11 w-full shrink-0 items-center justify-center px-1 pb-3 pt-1"
       data-story-chrome
       role="img"
       :aria-label="pathProgress === 0
-        ? 'Reveal starting'
+        ? `Reveal starting. ${reveal.steps.length} steps.`
         : `Through step ${pathProgress} of ${reveal.steps.length}`"
     >
-      <TransitionGroup
-        v-if="visiblePathNodes.length"
-        name="path-node"
-        tag="div"
-        class="flex w-full max-w-sm items-center px-1"
-      >
+      <div class="flex w-full max-w-sm items-center px-1">
         <div
-          v-for="(node, idx) in visiblePathNodes"
+          v-for="(node, idx) in pathNodes"
           :key="node.n"
           class="flex min-w-0 items-center"
-          :class="idx < visiblePathNodes.length - 1 ? 'flex-1' : 'shrink-0'"
+          :class="idx < pathNodes.length - 1 ? 'flex-1' : 'shrink-0'"
         >
           <span
-            class="path-node-icon flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--ink)] transition-colors duration-300"
+            class="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--ink)] transition-colors duration-300"
             :class="node.done
               ? 'bg-[var(--ink)] text-white'
               : node.latest
                 ? 'bg-[var(--accent)] text-[var(--ink)] shadow-block'
-                : 'bg-[var(--surface)] text-[var(--ink-muted)]'"
+                : node.next
+                  ? 'bg-[var(--surface)] text-[var(--ink)] shadow-block'
+                  : 'bg-[var(--surface)] text-[var(--ink-muted)]'"
             :title="node.type === 'draw' ? `Draw · step ${node.n}` : `Guess · step ${node.n}`"
           >
             <svg
@@ -252,35 +255,52 @@ onBeforeUnmount(() => {
           </span>
 
           <div
-            v-if="idx < visiblePathNodes.length - 1"
-            class="path-connector flex h-9 min-w-[0.5rem] flex-1 items-center px-0.5"
+            v-if="idx < pathNodes.length - 1"
+            class="flex h-9 min-w-[0.5rem] flex-1 items-center px-0.5"
             aria-hidden="true"
           >
             <svg
+              v-if="node.done"
               class="h-3 w-full text-[var(--ink)]"
               viewBox="0 0 40 12"
               preserveAspectRatio="none"
               fill="none"
             >
               <path
-                class="path-connector-line"
                 d="M1 7 C10 2, 18 11, 28 5 S36 8, 39 6"
                 stroke="currentColor"
                 stroke-width="2.25"
                 stroke-linecap="round"
-                pathLength="1"
               />
             </svg>
+            <svg
+              v-else-if="node.latest"
+              class="h-4 w-full text-[var(--ink)]"
+              viewBox="0 0 40 16"
+              preserveAspectRatio="xMidYMid meet"
+              fill="none"
+            >
+              <path
+                d="M2 8 C12 3, 20 13, 28 8 L28 8"
+                stroke="currentColor"
+                stroke-width="2.25"
+                stroke-linecap="round"
+              />
+              <path
+                d="M24 4 L32 8 L24 12"
+                stroke="currentColor"
+                stroke-width="2.25"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <div
+              v-else
+              class="mx-1 h-px w-full bg-[var(--ink)]/20"
+            />
           </div>
         </div>
-      </TransitionGroup>
-
-      <p
-        v-else
-        class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]"
-      >
-        It starts…
-      </p>
+      </div>
     </div>
 
     <!-- Stage: one card + tap zones -->
@@ -291,12 +311,12 @@ onBeforeUnmount(() => {
       <div
         v-if="scene"
         :key="scene.id"
-        class="story-card absolute inset-0 flex flex-col"
+        class="story-card absolute inset-0 flex items-center justify-center"
       >
         <!-- Brand -->
         <div
           v-if="scene.kind === 'brand'"
-          class="flex min-h-0 flex-1 flex-col items-center justify-center px-4"
+          class="flex items-center justify-center px-4"
         >
           <NuxtLink
             to="/play/new"
@@ -322,72 +342,72 @@ onBeforeUnmount(() => {
         <!-- Callback -->
         <div
           v-else-if="scene.kind === 'callback'"
-          class="flex min-h-0 flex-1 flex-col justify-center px-1"
+          class="callback-panel panel-sketch w-full p-4 sm:p-5"
         >
-          <div class="callback-panel panel-sketch w-full p-4 sm:p-5">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
-              Back to the start
-            </p>
-            <p class="mt-3 text-center text-2xl font-bold leading-snug tracking-tight text-[var(--ink)] sm:text-3xl">
-              “{{ reveal.prompt_text }}”
-            </p>
-            <p class="mt-3 text-center text-sm font-semibold text-[var(--ink-muted)]">
-              by {{ reveal.creator_nickname }}
-            </p>
-          </div>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+            Back to the start
+          </p>
+          <p class="mt-3 text-center text-2xl font-bold leading-snug tracking-tight text-[var(--ink)] sm:text-3xl">
+            “{{ reveal.prompt_text }}”
+          </p>
+          <p class="mt-3 text-center text-sm font-semibold text-[var(--ink-muted)]">
+            by {{ reveal.creator_nickname }}
+          </p>
         </div>
 
-        <!-- Prompt / step -->
+        <!-- Prompt -->
+        <div
+          v-else-if="scene.kind === 'prompt'"
+          class="panel-sketch w-full p-4 sm:p-5"
+        >
+          <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+            It started with
+          </p>
+          <p class="mt-3 text-center text-2xl font-bold leading-snug tracking-tight text-[var(--ink)] sm:text-3xl">
+            “{{ reveal.prompt_text }}”
+          </p>
+          <p class="mt-3 text-center text-sm font-semibold text-[var(--ink-muted)]">
+            by {{ reveal.creator_nickname }}
+          </p>
+        </div>
+
+        <!-- Draw -->
+        <div
+          v-else-if="scene.step.type === 'draw' && scene.step.stroke_json"
+          class="panel-sketch relative aspect-square h-full max-h-full w-auto max-w-full overflow-hidden p-0"
+        >
+          <CanvasReplayPlayer
+            :key="scene.id"
+            class="absolute inset-0 h-full w-full"
+            :document="scene.step.stroke_json"
+            :autoplay="true"
+            chrome="overlay"
+          />
+          <p
+            v-if="scene.step.author_nickname"
+            class="pointer-events-none absolute right-2.5 top-2.5 z-10 rounded-sm bg-[var(--surface)]/70 px-1.5 py-0.5 text-xs font-semibold text-[var(--ink)]"
+          >
+            {{ scene.step.author_nickname }}
+          </p>
+        </div>
+
+        <!-- Guess -->
         <div
           v-else
-          class="panel-sketch flex min-h-0 flex-1 flex-col"
-          :class="scene.kind === 'step' && scene.step.type === 'draw' && scene.step.stroke_json
-            ? 'overflow-hidden p-0'
-            : 'justify-center p-4 sm:p-5'"
+          class="panel-sketch relative w-full p-4 sm:p-5"
         >
-          <template v-if="scene.kind === 'prompt'">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
-              It started with
-            </p>
-            <p class="mt-3 text-center text-2xl font-bold leading-snug tracking-tight text-[var(--ink)] sm:text-3xl">
-              “{{ reveal.prompt_text }}”
-            </p>
-            <p class="mt-3 text-center text-sm font-semibold text-[var(--ink-muted)]">
-              by {{ reveal.creator_nickname }}
-            </p>
-          </template>
-
-          <template v-else-if="scene.step.type === 'draw' && scene.step.stroke_json">
-            <div class="relative min-h-0 flex-1">
-              <CanvasReplayPlayer
-                :key="scene.id"
-                :document="scene.step.stroke_json"
-                :autoplay="true"
-                chrome="overlay"
-              />
-              <p
-                v-if="scene.step.author_nickname"
-                class="pointer-events-none absolute right-2.5 top-2.5 z-10 rounded-sm bg-[var(--surface)]/70 px-1.5 py-0.5 text-xs font-semibold text-[var(--ink)] opacity-55"
-              >
-                {{ scene.step.author_nickname }}
-              </p>
-            </div>
-          </template>
-
-          <template v-else>
-            <p
-              v-if="scene.step.author_nickname"
-              class="text-right text-xs font-semibold text-[var(--ink-muted)]"
-            >
-              {{ scene.step.author_nickname }}
-            </p>
-            <p
-              v-if="scene.step.guess_text"
-              class="mt-4 text-center text-2xl font-bold leading-snug text-[var(--ink)] sm:text-3xl"
-            >
-              “{{ scene.step.guess_text }}”
-            </p>
-          </template>
+          <p
+            v-if="scene.step.author_nickname"
+            class="absolute right-2.5 top-2.5 text-xs font-semibold text-[var(--ink-muted)]"
+          >
+            {{ scene.step.author_nickname }}
+          </p>
+          <p
+            v-if="scene.step.guess_text"
+            class="px-6 py-8 text-center text-2xl font-bold leading-snug text-[var(--ink)] sm:text-3xl"
+          >
+            “{{ scene.step.guess_text }}”
+          </p>
         </div>
       </div>
     </div>
@@ -425,36 +445,6 @@ onBeforeUnmount(() => {
   animation: story-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Icon path: new nodes slide in from the right (progress fill) */
-.path-node-enter-active {
-  transition: opacity 0.35s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.path-node-leave-active {
-  transition: opacity 0.25s ease, transform 0.3s ease;
-  position: absolute;
-}
-
-.path-node-enter-from {
-  opacity: 0;
-  transform: translateX(1.25rem) scale(0.85);
-}
-
-.path-node-leave-to {
-  opacity: 0;
-  transform: translateX(0.5rem) scale(0.9);
-}
-
-.path-node-move {
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.path-connector-line {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 0;
-  animation: path-draw 0.4s ease-out both;
-}
-
 .brand-write {
   display: inline-flex;
   align-items: center;
@@ -487,15 +477,6 @@ onBeforeUnmount(() => {
 
 .callback-panel {
   animation: callback-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes path-draw {
-  from {
-    stroke-dashoffset: 1;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
 }
 
 @keyframes story-in {
@@ -547,19 +528,11 @@ onBeforeUnmount(() => {
   .story-card,
   .brand-write--cta,
   .brand-write__ch,
-  .callback-panel,
-  .path-connector-line {
+  .callback-panel {
     animation: none;
     opacity: 1;
     clip-path: none;
     transform: none;
-    stroke-dashoffset: 0;
-  }
-
-  .path-node-enter-active,
-  .path-node-leave-active,
-  .path-node-move {
-    transition: none;
   }
 }
 </style>

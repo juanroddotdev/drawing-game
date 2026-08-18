@@ -37,7 +37,7 @@ function syncSize() {
   const wrap = wrapRef.value
   const canvas = canvasRef.value
   if (!wrap || !canvas) return
-  const size = Math.floor(wrap.clientWidth)
+  const size = Math.floor(Math.min(wrap.clientWidth, wrap.clientHeight || wrap.clientWidth))
   if (size < 32) return
   cssSize = Math.max(160, size)
   dpr = Math.min(window.devicePixelRatio || 1, 2)
@@ -131,15 +131,15 @@ defineExpose({ play, pause, replay, showFinal })
 </script>
 
 <template>
-  <div :class="chrome === 'overlay' ? 'relative w-full' : 'space-y-2'">
+  <div :class="chrome === 'overlay' ? 'relative h-full w-full' : 'space-y-2'">
     <div
       ref="wrapRef"
-      class="w-full overflow-hidden bg-[var(--canvas)]"
+      class="overflow-hidden bg-[var(--canvas)]"
       :class="chrome === 'overlay'
-        ? ''
+        ? 'h-full w-full'
         : chrome === 'minimal'
-          ? 'border border-[var(--ink)]'
-          : 'rounded-[var(--radius-chip)] border border-[var(--ink)] shadow-block'"
+          ? 'w-full border border-[var(--ink)]'
+          : 'w-full rounded-[var(--radius-chip)] border border-[var(--ink)] shadow-block'"
     >
       <canvas
         ref="canvasRef"

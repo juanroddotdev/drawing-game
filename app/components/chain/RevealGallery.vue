@@ -482,7 +482,7 @@ onBeforeUnmount(() => {
         <!-- Brand -->
         <div
           v-if="layer.scene.kind === 'brand'"
-          class="flex items-center justify-center px-4"
+          class="story-frame panel-sketch relative flex items-center justify-center overflow-hidden p-4"
         >
           <NuxtLink
             to="/play/new"
@@ -508,15 +508,15 @@ onBeforeUnmount(() => {
         <!-- Callback -->
         <div
           v-else-if="layer.scene.kind === 'callback'"
-          class="callback-panel panel-sketch w-full p-4 sm:p-5"
+          class="story-frame panel-sketch relative flex flex-col items-center justify-center overflow-hidden p-5 sm:p-6"
         >
           <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
             Back to the start
           </p>
-          <p class="mt-3 text-center text-2xl font-bold leading-snug tracking-tight text-[var(--ink)] sm:text-3xl">
+          <p class="mt-4 text-center text-2xl font-bold leading-snug tracking-tight text-[var(--ink)] sm:text-3xl">
             “{{ reveal.prompt_text }}”
           </p>
-          <p class="mt-3 text-center text-sm font-semibold text-[var(--ink-muted)]">
+          <p class="mt-4 text-center text-sm font-semibold text-[var(--ink-muted)]">
             by {{ reveal.creator_nickname }}
           </p>
         </div>
@@ -524,15 +524,15 @@ onBeforeUnmount(() => {
         <!-- Prompt -->
         <div
           v-else-if="layer.scene.kind === 'prompt'"
-          class="panel-sketch w-full p-4 sm:p-5"
+          class="story-frame panel-sketch relative flex flex-col items-center justify-center overflow-hidden p-5 sm:p-6"
         >
           <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
             It started with
           </p>
-          <p class="mt-3 text-center text-2xl font-bold leading-snug tracking-tight text-[var(--ink)] sm:text-3xl">
+          <p class="mt-4 text-center text-2xl font-bold leading-snug tracking-tight text-[var(--ink)] sm:text-3xl">
             “{{ reveal.prompt_text }}”
           </p>
-          <p class="mt-3 text-center text-sm font-semibold text-[var(--ink-muted)]">
+          <p class="mt-4 text-center text-sm font-semibold text-[var(--ink-muted)]">
             by {{ reveal.creator_nickname }}
           </p>
         </div>
@@ -540,7 +540,7 @@ onBeforeUnmount(() => {
         <!-- Draw -->
         <div
           v-else-if="layer.scene.kind === 'step' && layer.scene.step.type === 'draw' && layer.scene.step.stroke_json"
-          class="panel-sketch relative aspect-square h-full max-h-full w-auto max-w-full overflow-hidden p-0"
+          class="story-frame panel-sketch relative overflow-hidden p-0"
         >
           <CanvasReplayPlayer
             :key="layer.scene.id"
@@ -560,7 +560,7 @@ onBeforeUnmount(() => {
         <!-- Guess -->
         <div
           v-else-if="layer.scene.kind === 'step'"
-          class="panel-sketch relative w-full p-4 sm:p-5"
+          class="story-frame panel-sketch relative flex flex-col items-center justify-center overflow-hidden p-5 sm:p-6"
         >
           <p
             v-if="layer.scene.step.author_nickname"
@@ -570,7 +570,7 @@ onBeforeUnmount(() => {
           </p>
           <p
             v-if="layer.scene.step.guess_text"
-            class="px-6 py-8 text-center text-2xl font-bold leading-snug text-[var(--ink)] sm:text-3xl"
+            class="px-4 text-center text-2xl font-bold leading-snug text-[var(--ink)] sm:text-3xl"
           >
             “{{ layer.scene.step.guess_text }}”
           </p>
@@ -616,6 +616,14 @@ onBeforeUnmount(() => {
   transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.story-frame {
+  aspect-ratio: 1;
+  height: 100%;
+  max-height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+
 .brand-write {
   display: inline-flex;
   align-items: center;
@@ -646,10 +654,6 @@ onBeforeUnmount(() => {
   animation-delay: calc(var(--i) * 0.055s);
 }
 
-.callback-panel {
-  animation: callback-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
 @keyframes brand-write-ch {
   to {
     opacity: 1;
@@ -673,25 +677,13 @@ onBeforeUnmount(() => {
   }
 }
 
-@keyframes callback-rise {
-  from {
-    opacity: 0;
-    transform: translateY(1.25rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .story-slide--snap {
     transition: none;
   }
 
   .brand-write--cta,
-  .brand-write__ch,
-  .callback-panel {
+  .brand-write__ch {
     animation: none;
     opacity: 1;
     clip-path: none;

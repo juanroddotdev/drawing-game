@@ -9,6 +9,7 @@ import { PROMPT_NOUNS } from '~/utils/prompts/wordBanks'
 import { isExpiredTokenError, sharePath, stepTypeForNumber } from '~/types/chain'
 import { displayShareUrl } from '~/utils/passHandoff'
 import { formatPassSubheader, pickPassSubheader } from '~/utils/passCopy'
+import { snapEase, travelToDrawT } from '~/utils/revealDrawGesture'
 
 describe('strokes', () => {
   it('round-trips JSON', () => {
@@ -126,5 +127,21 @@ describe('prompts & chain helpers', () => {
   it('detects expired token errors', () => {
     expect(isExpiredTokenError('invalid_or_expired_token')).toBe(true)
     expect(isExpiredTokenError('chain_not_found')).toBe(false)
+  })
+})
+
+describe('reveal draw gesture', () => {
+  it('maps card travel to drawing progress', () => {
+    expect(travelToDrawT(-200, 400, 'next')).toBeCloseTo(0.5)
+    expect(travelToDrawT(-400, 400, 'next')).toBe(1)
+    expect(travelToDrawT(200, 400, 'back')).toBeCloseTo(0.5)
+    expect(travelToDrawT(0, 400, 'next')).toBe(0)
+    expect(travelToDrawT(-50, 400, 'back')).toBe(0)
+  })
+
+  it('eases from 0 to 1 like the card snap curve', () => {
+    expect(snapEase(0)).toBeCloseTo(0)
+    expect(snapEase(1)).toBeCloseTo(1)
+    expect(snapEase(0.5)).toBeGreaterThan(0.5)
   })
 })

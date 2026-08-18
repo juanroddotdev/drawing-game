@@ -10,6 +10,8 @@ const props = withDefaults(defineProps<{
   autoplay?: boolean
   /** full = play/pause/skip; minimal = canvas + Replay; overlay = canvas + corner play. */
   chrome?: 'full' | 'minimal' | 'overlay'
+  /** When set (0–1), parent owns the timeline: no autoplay, no chrome play button. */
+  progress?: number
 }>(), {
   speed: 2.5,
   autoplay: true,
@@ -32,12 +34,13 @@ let lastFrame = 0
 let resizeObserver: ResizeObserver | null = null
 
 const duration = computed(() => Math.max(documentDurationMs(props.document), 1))
+const controlled = computed(() => typeof props.progress === 'number')
 
 function syncSize() {
   const wrap = wrapRef.value
   const canvas = canvasRef.value
   if (!wrap || !canvas) return
-  const size = Math.floor(wrap.clientWidth)
+  const size = Math.floor(Math.min(wrap.clientWidth, wrap.clientHeight || wrap.clientWidth))
   if (size < 32) return
   cssSize = Math.max(160, size)
   dpr = Math.min(window.devicePixelRatio || 1, 2)
@@ -45,7 +48,7 @@ function syncSize() {
   canvas.height = cssSize * dpr
   canvas.style.width = `${cssSize}px`
   canvas.style.height = `${cssSize}px`
-  paint(progressMs.value)
+  if (!paintProgress()) paint(progressMs.value)
 }
 
 function paint(untilMs: number) {
@@ -53,10 +56,25 @@ function paint(untilMs: number) {
   if (!canvas) return
   const ctx = canvas.getContext('2d')
   if (!ctx) return
+  const empty = createEmptyDocument(props.document.aspect)
+  if (untilMs < 0) {
+    renderDocument(ctx, empty, cssSize, cssSize, dpr)
+    return
+  }
   const partial = untilMs >= duration.value
     ? props.document
     : filterStrokesUntil(props.document, untilMs)
-  renderDocument(ctx, partial.strokes.length ? partial : createEmptyDocument(props.document.aspect), cssSize, cssSize, dpr)
+  renderDocument(ctx, partial.strokes.length ? partial : empty, cssSize, cssSize, dpr)
+}
+
+function paintProgress() {
+  if (typeof props.progress !== 'number') return false
+  pause()
+  const p = props.progress
+  const until = p <= 0 ? -1 : p >= 1 ? duration.value : p * duration.value
+  progressMs.value = Math.max(0, until)
+  paint(until)
+  return true
 }
 
 function tick(now: number) {
@@ -102,11 +120,19 @@ function showFinal() {
 }
 
 watch(() => props.document, () => {
+  if (paintProgress()) {
+    syncSize()
+    return
+  }
   progressMs.value = 0
   syncSize()
   if (props.autoplay) play()
   else paint(duration.value)
 }, { deep: true })
+
+watch(() => props.progress, () => {
+  paintProgress()
+})
 
 onMounted(() => {
   syncSize()
@@ -117,6 +143,7 @@ onMounted(() => {
   else {
     window.addEventListener('resize', syncSize)
   }
+  if (paintProgress()) return
   if (props.autoplay) play()
   else paint(duration.value)
 })
@@ -131,15 +158,15 @@ defineExpose({ play, pause, replay, showFinal })
 </script>
 
 <template>
-  <div :class="chrome === 'overlay' ? 'relative w-full' : 'space-y-2'">
+  <div :class="chrome === 'overlay' ? 'relative h-full w-full' : 'space-y-2'">
     <div
       ref="wrapRef"
-      class="w-full overflow-hidden bg-[var(--canvas)]"
+      class="overflow-hidden bg-[var(--canvas)]"
       :class="chrome === 'overlay'
-        ? ''
+        ? 'h-full w-full'
         : chrome === 'minimal'
-          ? 'border border-[var(--ink)]'
-          : 'rounded-[var(--radius-chip)] border border-[var(--ink)] shadow-block'"
+          ? 'w-full border border-[var(--ink)]'
+          : 'w-full rounded-[var(--radius-chip)] border border-[var(--ink)] shadow-block'"
     >
       <canvas
         ref="canvasRef"
@@ -149,7 +176,7 @@ defineExpose({ play, pause, replay, showFinal })
     </div>
 
     <button
-      v-if="chrome === 'overlay' && !playing"
+      v-if="chrome === 'overlay' && !playing && !controlled"
       type="button"
       class="absolute bottom-2.5 right-2.5 z-10 flex size-9 items-center justify-center rounded-full border border-[var(--ink)] bg-[var(--surface)] text-[var(--ink)] shadow-block transition hover:bg-[var(--accent)]"
       aria-label="Play drawing"

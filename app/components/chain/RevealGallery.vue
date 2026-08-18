@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { RevealPayload, RevealStep, StepType } from '~/types/chain'
 import { stepTypeForNumber } from '~/types/chain'
+import { snapEase, travelToDrawT } from '~/utils/revealDrawGesture'
 
 const props = defineProps<{
   reveal: RevealPayload
@@ -15,6 +16,10 @@ type SceneKind =
 type Scene = SceneKind & {
   cycle: number
   id: string
+}
+
+function isDrawScene(s: Scene | null | undefined): s is Scene & { kind: 'step', step: RevealStep } {
+  return Boolean(s && s.kind === 'step' && s.step.type === 'draw' && s.step.stroke_json)
 }
 
 function buildCycle(cycle: number, includeOpeningPrompt: boolean): Scene[] {
@@ -40,72 +45,147 @@ function buildCycle(cycle: number, includeOpeningPrompt: boolean): Scene[] {
 }
 
 const BRAND_LETTERS = 'DoodleLoop'.split('')
-/** Write-on duration before CTA morph + compare prompt */
+/** Write-on duration before CTA morph */
 const BRAND_WRITE_MS = 780
 
 /** Growing timeline — after each close, the journey repeats (endless). */
 const timeline = ref<Scene[]>(buildCycle(0, true))
 const nextCycle = ref(1)
+const index = ref(0)
 
 /** Brand marks that have finished writing and become the landing CTA. */
 const brandCtaIds = ref<Record<string, true>>({})
 
-/** How many scenes are visible (1-based count). Starts with prompt only. */
-const visibleCount = ref(1)
-const cardRefs = ref<HTMLElement[]>([])
-const sentinelRef = ref<HTMLElement | null>(null)
+const scene = computed(() => timeline.value[index.value] ?? null)
+const canGoBack = computed(() => index.value > 0)
 
-const visibleScenes = computed(() => timeline.value.slice(0, visibleCount.value))
+/**
+ * How far the icon path has grown (0 = prompt only; N = through step N;
+ * max = brand/callback — full path complete).
+ */
+const pathProgress = computed(() => {
+  const s = scene.value
+  const max = props.reveal.steps.length
+  if (!s || s.kind === 'prompt') return 0
+  if (s.kind === 'step') return s.step.step_number
+  return max
+})
 
-let revealLock = false
-let scrollArmed = false
-let ignoreScrollUntil = 0
-let callbackTimer: ReturnType<typeof setTimeout> | null = null
+const pathNodes = computed(() => {
+  const max = props.reveal.steps.length
+  const progress = pathProgress.value
+  const complete = scene.value?.kind === 'brand' || scene.value?.kind === 'callback'
+  return Array.from({ length: max }, (_, i) => {
+    const n = i + 1
+    const done = complete || n < progress
+    const latest = !complete && n === progress && scene.value?.kind === 'step'
+    const next = !complete && (
+      (progress === 0 && n === 1) || (progress > 0 && n === progress + 1)
+    )
+    return {
+      n,
+      type: stepTypeForNumber(n) as StepType,
+      done,
+      latest,
+      next,
+    }
+  })
+})
 
-/** Icons for steps 1…through (draw/guess path so far on this card). */
-function pathThrough(through: number) {
-  return Array.from({ length: through }, (_, i) => ({
-    n: i + 1,
-    type: stepTypeForNumber(i + 1) as StepType,
-  }))
+let brandTimer: ReturnType<typeof setTimeout> | null = null
+let snapTimer: ReturnType<typeof setTimeout> | null = null
+
+const stageRef = ref<HTMLElement | null>(null)
+const stageW = ref(1)
+const dragX = ref(0)
+const dragging = ref(false)
+const snapping = ref(false)
+const snapDir = ref<'next' | 'back' | null>(null)
+
+const SNAP_MS = 320
+const SWIPE_PX = 56
+const SWIPE_VX = 0.4
+
+/** Incoming incomplete draw — follows card travel. Completed draws stay at 1. */
+const drawT = ref(0)
+const completedDrawIds = ref<Record<string, true>>({})
+
+let pointerId: number | null = null
+let startX = 0
+let startY = 0
+let startT = 0
+let axis: 'undecided' | 'x' | 'y' = 'undecided'
+let drawRaf = 0
+
+const peekScene = computed(() => {
+  if (snapDir.value === 'next' || dragX.value < -6) {
+    return timeline.value[index.value + 1] ?? null
+  }
+  if ((snapDir.value === 'back' || dragX.value > 6) && index.value > 0) {
+    return timeline.value[index.value - 1] ?? null
+  }
+  return null
+})
+
+const peekX = computed(() => {
+  const w = stageW.value
+  if (snapDir.value === 'back' || dragX.value > 6) return -w + dragX.value
+  return w + dragX.value
+})
+
+const layers = computed(() => {
+  const current = scene.value
+  if (!current) return []
+  const list: Array<{ id: string, scene: Scene, x: number, current: boolean }> = []
+  if (peekScene.value) {
+    list.push({ id: peekScene.value.id, scene: peekScene.value, x: peekX.value, current: false })
+  }
+  list.push({ id: current.id, scene: current, x: dragX.value, current: true })
+  return list
+})
+
+function isDrawDone(s: Scene | null | undefined) {
+  return Boolean(s && completedDrawIds.value[s.id])
 }
 
-function setCardRef(el: Element | null, i: number) {
-  if (!el) return
-  cardRefs.value[i] = el as HTMLElement
+function incomingToward(): 'next' | 'back' | null {
+  if (snapDir.value === 'next' || dragX.value < -6) return 'next'
+  if ((snapDir.value === 'back' || dragX.value > 6) && index.value > 0) return 'back'
+  return null
 }
 
-function clearCallbackTimer() {
-  if (callbackTimer != null) {
-    clearTimeout(callbackTimer)
-    callbackTimer = null
+function incomingScene(toward: 'next' | 'back' | null) {
+  if (toward === 'next') return timeline.value[index.value + 1] ?? null
+  if (toward === 'back') return timeline.value[index.value - 1] ?? null
+  return null
+}
+
+function progressForLayer(layer: { scene: Scene, current: boolean }) {
+  if (!isDrawScene(layer.scene)) return 0
+  if (isDrawDone(layer.scene)) return 1
+  return drawT.value
+}
+
+function measureStage() {
+  stageW.value = stageRef.value?.clientWidth || 1
+}
+
+function clearBrandTimer() {
+  if (brandTimer != null) {
+    clearTimeout(brandTimer)
+    brandTimer = null
   }
 }
 
-/** Frame last guess near the top so brand + prompt can share the viewport. */
-function scrollClosingComposition(brandIndex: number) {
-  nextTick(() => {
-    const guessEl = cardRefs.value[brandIndex - 1]
-    if (guessEl) {
-      guessEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      return
-    }
-    cardRefs.value[brandIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  })
+function clearSnapTimer() {
+  if (snapTimer != null) {
+    clearTimeout(snapTimer)
+    snapTimer = null
+  }
 }
 
-function scrollToCard(i: number) {
-  nextTick(() => {
-    const el = cardRefs.value[i]
-    const scene = visibleScenes.value[i]
-    if (!el || !scene) return
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  })
-}
-
-function ensureRoomToReveal() {
-  if (visibleCount.value < timeline.value.length) return
-  // Next loop starts on the first turn — callback already restated the prompt
+function ensureRoom() {
+  if (index.value < timeline.value.length - 1) return
   timeline.value = [
     ...timeline.value,
     ...buildCycle(nextCycle.value, false),
@@ -113,47 +193,231 @@ function ensureRoomToReveal() {
   nextCycle.value += 1
 }
 
-function revealCallbackQuietly() {
-  ensureRoomToReveal()
-  const next = timeline.value[visibleCount.value]
-  if (next?.kind !== 'callback') {
-    revealLock = false
-    return
-  }
-  visibleCount.value += 1
-  // Stay put — last guess, DoodleLoop, and prompt should already share the view
-  ignoreScrollUntil = Date.now() + 600
-  window.setTimeout(() => {
-    revealLock = false
-  }, 200)
+function prefersReducedMotion() {
+  return typeof window !== 'undefined'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-function revealNext() {
-  if (revealLock) return
-  revealLock = true
-  clearCallbackTimer()
-  ensureRoomToReveal()
-  visibleCount.value += 1
-  const i = visibleCount.value - 1
-  const scene = timeline.value[i]
-  // Ignore scroll events caused by our own scrollIntoView so we don’t cascade
-  ignoreScrollUntil = Date.now() + 850
+function clearDrawAnim() {
+  if (drawRaf) {
+    cancelAnimationFrame(drawRaf)
+    drawRaf = 0
+  }
+}
 
-  if (scene?.kind === 'brand') {
-    scrollClosingComposition(i)
-    // After write-on: become the landing CTA, then slide in the compare prompt
-    callbackTimer = setTimeout(() => {
-      callbackTimer = null
-      brandCtaIds.value = { ...brandCtaIds.value, [scene.id]: true }
-      revealCallbackQuietly()
-    }, BRAND_WRITE_MS)
+function markCurrentDrawDone() {
+  const s = scene.value
+  if (!isDrawScene(s)) return
+  completedDrawIds.value = { ...completedDrawIds.value, [s.id]: true }
+  drawT.value = 1
+}
+
+function syncDrawFromTravel() {
+  const toward = incomingToward()
+  const incoming = incomingScene(toward)
+  if (!isDrawScene(incoming) || isDrawDone(incoming)) return
+  drawT.value = travelToDrawT(dragX.value, stageW.value, toward)
+}
+
+function drawSnapTarget(commit: 'next' | 'back' | null): 0 | 1 | null {
+  if (commit === 'next' || commit === 'back') {
+    const incoming = incomingScene(commit)
+    if (isDrawScene(incoming) && !isDrawDone(incoming)) return 1
+    return null
+  }
+  const toward = incomingToward()
+  const incoming = incomingScene(toward)
+  if (isDrawScene(incoming) && !isDrawDone(incoming)) return 0
+  return null
+}
+
+function animateDrawTo(to: 0 | 1) {
+  const from = drawT.value
+  if (Math.abs(from - to) < 0.001) {
+    drawT.value = to
+    return
+  }
+  const start = performance.now()
+  const step = (now: number) => {
+    const u = Math.min(1, (now - start) / SNAP_MS)
+    drawT.value = from + (to - from) * snapEase(u)
+    if (u < 1) {
+      drawRaf = requestAnimationFrame(step)
+      return
+    }
+    drawT.value = to
+    drawRaf = 0
+  }
+  clearDrawAnim()
+  drawRaf = requestAnimationFrame(step)
+}
+
+function commitNext() {
+  const current = scene.value
+  if (current?.kind === 'brand' && !brandCtaIds.value[current.id]) {
+    clearBrandTimer()
+    brandCtaIds.value = { ...brandCtaIds.value, [current.id]: true }
+  }
+  clearBrandTimer()
+  ensureRoom()
+  index.value += 1
+  markCurrentDrawDone()
+  onSceneEntered()
+}
+
+function commitBack() {
+  if (!canGoBack.value) return
+  clearBrandTimer()
+  index.value -= 1
+  markCurrentDrawDone()
+  onSceneEntered()
+}
+
+function snapTo(dir: 'next' | 'back' | null) {
+  if (snapping.value) return
+  if (dir === 'back' && !canGoBack.value) return
+  if (dir === 'next') ensureRoom()
+  measureStage()
+
+  const commit = dir
+  const toward = dir ?? (dragX.value < -6 ? 'next' : dragX.value > 6 ? 'back' : null)
+  const drawTo = drawSnapTarget(commit)
+
+  if (prefersReducedMotion() || stageW.value < 8) {
+    if (drawTo != null) drawT.value = drawTo
+    if (commit === 'next') commitNext()
+    else if (commit === 'back') commitBack()
+    else drawT.value = 0
+    dragX.value = 0
+    snapDir.value = null
+    dragging.value = false
     return
   }
 
-  scrollToCard(i)
-  window.setTimeout(() => {
-    revealLock = false
-  }, 700)
+  snapDir.value = toward
+  dragging.value = false
+  if (drawTo === 1) {
+    const travelDir = commit === 'back' || toward === 'back' ? 'back' : 'next'
+    drawT.value = travelToDrawT(dragX.value, stageW.value, travelDir)
+  }
+  nextTick(() => {
+    snapping.value = true
+    dragX.value = commit === 'next'
+      ? -stageW.value
+      : commit === 'back'
+        ? stageW.value
+        : 0
+    if (drawTo != null) animateDrawTo(drawTo)
+    clearSnapTimer()
+    snapTimer = setTimeout(() => {
+      clearDrawAnim()
+      if (drawTo != null) drawT.value = drawTo
+      if (commit === 'next') commitNext()
+      else if (commit === 'back') commitBack()
+      else drawT.value = 0
+      dragX.value = 0
+      snapDir.value = null
+      snapping.value = false
+      dragging.value = false
+      axis = 'undecided'
+    }, SNAP_MS)
+  })
+}
+
+function goNext() {
+  snapTo('next')
+}
+
+function goBack() {
+  snapTo('back')
+}
+
+function isChromeTarget(target: EventTarget | null) {
+  return Boolean((target as HTMLElement | null)?.closest('a, button, input, textarea, [data-story-chrome]'))
+}
+
+function onPointerDown(e: PointerEvent) {
+  if (e.button !== 0) return
+  if (snapping.value || isChromeTarget(e.target)) return
+  measureStage()
+  ensureRoom()
+  pointerId = e.pointerId
+  startX = e.clientX
+  startY = e.clientY
+  startT = performance.now()
+  axis = 'undecided'
+  dragging.value = false
+  try {
+    stageRef.value?.setPointerCapture(e.pointerId)
+  }
+  catch {
+    /* ignore */
+  }
+}
+
+function onPointerMove(e: PointerEvent) {
+  if (pointerId !== e.pointerId || snapping.value) return
+  const dx = e.clientX - startX
+  const dy = e.clientY - startY
+  if (axis === 'undecided') {
+    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
+    axis = Math.abs(dx) > Math.abs(dy) * 1.15 ? 'x' : 'y'
+    if (axis === 'x') dragging.value = true
+  }
+  if (axis !== 'x') return
+  e.preventDefault()
+  let x = dx
+  if (x > 0 && !canGoBack.value) x *= 0.22
+  dragX.value = x
+  syncDrawFromTravel()
+}
+
+function onPointerUp(e: PointerEvent) {
+  if (pointerId !== e.pointerId) return
+  pointerId = null
+  try {
+    stageRef.value?.releasePointerCapture(e.pointerId)
+  }
+  catch {
+    /* ignore */
+  }
+
+  const dx = dragX.value
+  const dt = Math.max(1, performance.now() - startT)
+  const vx = (e.clientX - startX) / dt
+  const wasDrag = dragging.value && axis === 'x'
+
+  if (!wasDrag) {
+    dragX.value = 0
+    dragging.value = false
+    axis = 'undecided'
+    if (isChromeTarget(e.target)) return
+    if (Math.abs(e.clientX - startX) < 10 && Math.abs(e.clientY - startY) < 10) {
+      const rect = stageRef.value?.getBoundingClientRect()
+      if (!rect) return
+      if (e.clientX - rect.left < rect.width * 0.28) goBack()
+      else goNext()
+    }
+    return
+  }
+
+  const goFwd = dx < -SWIPE_PX || vx < -SWIPE_VX
+  const goBwd = canGoBack.value && (dx > SWIPE_PX || vx > SWIPE_VX)
+  if (goFwd) snapTo('next')
+  else if (goBwd) snapTo('back')
+  else snapTo(null)
+}
+
+function onSceneEntered() {
+  const s = scene.value
+  if (!s) return
+  if (isDrawScene(s)) markCurrentDrawDone()
+  if (s.kind === 'brand' && !brandCtaIds.value[s.id]) {
+    brandTimer = setTimeout(() => {
+      brandTimer = null
+      brandCtaIds.value = { ...brandCtaIds.value, [s.id]: true }
+    }, BRAND_WRITE_MS)
+  }
 }
 
 function onBrandClick(event: MouseEvent, id: string) {
@@ -162,326 +426,345 @@ function onBrandClick(event: MouseEvent, id: string) {
   }
 }
 
-/** Sentinel crossed into the lower viewport → reveal next beat. */
-function tryRevealFromScroll() {
-  if (!scrollArmed || revealLock || Date.now() < ignoreScrollUntil) return
-  const el = sentinelRef.value
-  if (!el) return
-  const rect = el.getBoundingClientRect()
-  const vh = window.innerHeight || 1
-  // Trigger when the sentinel reaches the lower ~third of the screen
-  if (rect.top < vh * 0.72 && rect.bottom > 0) {
-    revealNext()
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault()
+    goNext()
+  }
+  else if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+    e.preventDefault()
+    goBack()
   }
 }
 
-function onScrollGesture() {
-  scrollArmed = true
-  tryRevealFromScroll()
-}
-
 onMounted(() => {
-  window.addEventListener('scroll', onScrollGesture, { passive: true })
-  window.addEventListener('touchmove', onScrollGesture, { passive: true })
-  window.addEventListener('wheel', onScrollGesture, { passive: true })
+  onSceneEntered()
+  measureStage()
+  window.addEventListener('keydown', onKeydown)
+  window.addEventListener('resize', measureStage)
 })
 
 onBeforeUnmount(() => {
-  clearCallbackTimer()
-  window.removeEventListener('scroll', onScrollGesture)
-  window.removeEventListener('touchmove', onScrollGesture)
-  window.removeEventListener('wheel', onScrollGesture)
+  clearBrandTimer()
+  clearSnapTimer()
+  clearDrawAnim()
+  window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('resize', measureStage)
 })
 </script>
 
 <template>
-  <div class="relative flex flex-col gap-5 pb-28">
-    <!-- Growing timeline -->
-    <div class="mx-auto w-full max-w-lg">
-      <template
-        v-for="(scene, i) in visibleScenes"
-        :key="scene.id"
+  <div
+    class="story relative mx-auto flex h-full min-h-[28rem] w-full max-w-lg flex-col"
+    role="region"
+    aria-roledescription="carousel"
+    aria-label="Reveal story"
+  >
+    <!-- Wordmark — home -->
+    <header
+      class="flex shrink-0 justify-center pb-2 pt-0.5"
+      data-story-chrome
+    >
+      <NuxtLink
+        to="/"
+        class="font-sketch text-xl font-bold leading-none tracking-tight text-[var(--ink)]"
+        aria-label="DoodleLoop — home"
       >
+        DoodleLoop
+      </NuxtLink>
+    </header>
+
+    <!-- Progress — all slots visible; fill in as the story advances -->
+    <div
+      class="flex min-h-11 w-full shrink-0 items-center justify-center px-1 pb-3 pt-1"
+      data-story-chrome
+      role="img"
+      :aria-label="pathProgress === 0
+        ? `Reveal starting. ${reveal.steps.length} steps.`
+        : `Through step ${pathProgress} of ${reveal.steps.length}`"
+    >
+      <div class="flex w-full max-w-sm items-center px-1">
         <div
-          v-if="i > 0 && scene.kind !== 'brand' && scene.kind !== 'callback'"
-          class="flex justify-center py-8 text-[var(--ink)] sm:py-10"
-          aria-hidden="true"
+          v-for="(node, idx) in pathNodes"
+          :key="node.n"
+          class="flex min-w-0 items-center"
+          :class="idx < pathNodes.length - 1 ? 'flex-1' : 'shrink-0'"
         >
-          <!-- Line between earlier beats; arrow only into the latest -->
-          <svg
-            v-if="i < visibleCount - 1"
-            class="h-10 w-4"
-            viewBox="0 0 12 40"
-            fill="none"
+          <span
+            class="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--ink)] transition-colors duration-300"
+            :class="node.done
+              ? 'bg-[var(--ink)] text-white'
+              : node.latest
+                ? 'bg-[var(--accent)] text-[var(--ink)] shadow-block'
+                : node.next
+                  ? 'bg-[var(--surface)] text-[var(--ink)] shadow-block'
+                  : 'bg-[var(--surface)] text-[var(--ink-muted)]'"
+            :title="node.type === 'draw' ? `Draw · step ${node.n}` : `Guess · step ${node.n}`"
           >
-            <path
-              d="M7 1 C2 10, 11 18, 5 28 S8 36, 6 39"
-              stroke="currentColor"
-              stroke-width="2.25"
-              stroke-linecap="round"
-            />
-          </svg>
-          <svg
-            v-else
-            class="h-12 w-5"
-            viewBox="0 0 16 48"
-            fill="none"
-          >
-            <path
-              d="M8 2 C3 12, 13 20, 8 30 L8 30"
-              stroke="currentColor"
-              stroke-width="2.25"
-              stroke-linecap="round"
-            />
-            <path
-              d="M4 32 L8 40 L12 32"
+            <svg
+              v-if="node.type === 'draw'"
+              viewBox="0 0 24 24"
+              class="h-4 w-4"
+              fill="none"
               stroke="currentColor"
               stroke-width="2.25"
               stroke-linecap="round"
               stroke-linejoin="round"
-            />
-          </svg>
-        </div>
+              aria-hidden="true"
+            >
+              <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
+              <path d="m9 15 5-5" />
+            </svg>
+            <svg
+              v-else
+              viewBox="0 0 24 24"
+              class="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.25"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M7 8h10" />
+              <path d="M7 12h6" />
+              <path d="M21 15a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" />
+            </svg>
+          </span>
 
+          <div
+            v-if="idx < pathNodes.length - 1"
+            class="flex h-9 min-w-[0.5rem] flex-1 items-center px-0.5"
+            aria-hidden="true"
+          >
+            <svg
+              v-if="node.done"
+              class="h-3 w-full text-[var(--ink)]"
+              viewBox="0 0 40 12"
+              preserveAspectRatio="none"
+              fill="none"
+            >
+              <path
+                d="M1 7 C10 2, 18 11, 28 5 S36 8, 39 6"
+                stroke="currentColor"
+                stroke-width="2.25"
+                stroke-linecap="round"
+              />
+            </svg>
+            <svg
+              v-else-if="node.latest"
+              class="h-4 w-full text-[var(--ink)]"
+              viewBox="0 0 40 16"
+              preserveAspectRatio="xMidYMid meet"
+              fill="none"
+            >
+              <path
+                d="M2 8 C12 3, 20 13, 28 8 L28 8"
+                stroke="currentColor"
+                stroke-width="2.25"
+                stroke-linecap="round"
+              />
+              <path
+                d="M24 4 L32 8 L24 12"
+                stroke="currentColor"
+                stroke-width="2.25"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <div
+              v-else
+              class="mx-1 h-px w-full bg-[var(--ink)]/20"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage: swipe + tap -->
+    <div
+      ref="stageRef"
+      class="relative min-h-0 flex-1 touch-pan-y select-none overflow-hidden"
+      @pointerdown="onPointerDown"
+      @pointermove="onPointerMove"
+      @pointerup="onPointerUp"
+      @pointercancel="onPointerUp"
+    >
+      <div
+        v-for="layer in layers"
+        :key="layer.id"
+        class="story-slide absolute inset-0 flex items-center justify-center"
+        :class="{ 'story-slide--snap': snapping && !dragging }"
+        :style="{ transform: `translate3d(${layer.x}px, 0, 0)` }"
+      >
+        <!-- Brand -->
         <div
-          v-if="scene.kind === 'brand'"
-          :ref="(el) => setCardRef(el as Element | null, i)"
-          class="reveal-card brand-beat flex items-center justify-center"
+          v-if="layer.scene.kind === 'brand'"
+          class="story-frame panel-sketch relative flex items-center justify-center overflow-hidden p-4"
         >
           <NuxtLink
             to="/play/new"
             class="font-sketch text-4xl font-bold leading-none tracking-tight sm:text-5xl"
-            :class="brandCtaIds[scene.id]
+            :class="brandCtaIds[layer.scene.id]
               ? 'brand-write brand-write--cta btn-accent !px-6 !py-4 sm:!px-8 sm:!py-5'
               : 'brand-write brand-write--plain'"
-            :tabindex="brandCtaIds[scene.id] ? undefined : -1"
-            :aria-disabled="brandCtaIds[scene.id] ? undefined : 'true'"
+            :tabindex="brandCtaIds[layer.scene.id] ? undefined : -1"
+            :aria-disabled="brandCtaIds[layer.scene.id] ? undefined : 'true'"
             aria-label="DoodleLoop — start a new game"
-            @click="onBrandClick($event, scene.id)"
+            data-story-chrome
+            @click="onBrandClick($event, layer.scene.id)"
           >
             <span
               v-for="(ch, li) in BRAND_LETTERS"
-              :key="`${scene.id}-${li}`"
+              :key="`${layer.scene.id}-${li}`"
               class="brand-write__ch"
               :style="{ '--i': li }"
             >{{ ch }}</span>
           </NuxtLink>
         </div>
 
+        <!-- Callback -->
         <div
-          v-else-if="scene.kind === 'callback'"
-          :ref="(el) => setCardRef(el as Element | null, i)"
-          class="reveal-card callback-beat flex items-end"
+          v-else-if="layer.scene.kind === 'callback'"
+          class="story-frame panel-sketch relative flex flex-col items-center justify-center overflow-hidden p-5 sm:p-6"
         >
-          <div class="callback-panel panel-sketch w-full p-4 sm:p-5">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
-              Back to the start
-            </p>
-            <p class="mt-3 text-center text-2xl font-bold leading-snug tracking-tight text-[var(--ink)] sm:text-3xl">
-              “{{ reveal.prompt_text }}”
-            </p>
-            <p class="mt-3 text-center text-sm font-semibold text-[var(--ink-muted)]">
-              by {{ reveal.creator_nickname }}
-            </p>
-          </div>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+            Back to the start
+          </p>
+          <p class="mt-4 text-center text-2xl font-bold leading-snug tracking-tight text-[var(--ink)] sm:text-3xl">
+            “{{ reveal.prompt_text }}”
+          </p>
+          <p class="mt-4 text-center text-sm font-semibold text-[var(--ink-muted)]">
+            by {{ reveal.creator_nickname }}
+          </p>
         </div>
 
+        <!-- Prompt -->
         <div
-          v-else
-          :ref="(el) => setCardRef(el as Element | null, i)"
-          class="panel-sketch reveal-card"
-          :class="scene.kind === 'step' && scene.step.type === 'draw' && scene.step.stroke_json
-            ? 'overflow-hidden p-0'
-            : 'p-4 sm:p-5'"
+          v-else-if="layer.scene.kind === 'prompt'"
+          class="story-frame panel-sketch relative flex flex-col items-center justify-center overflow-hidden p-5 sm:p-6"
         >
-          <template v-if="scene.kind === 'prompt'">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
-              It started with
-            </p>
-            <p class="mt-3 text-center text-2xl font-bold leading-snug tracking-tight text-[var(--ink)] sm:text-3xl">
-              “{{ reveal.prompt_text }}”
-            </p>
-            <p class="mt-3 text-center text-sm font-semibold text-[var(--ink-muted)]">
-              by {{ reveal.creator_nickname }}
-            </p>
-          </template>
-
-          <template v-else-if="scene.step.type === 'draw' && scene.step.stroke_json">
-            <div class="relative">
-              <CanvasReplayPlayer
-                :key="`${scene.id}-v-${visibleCount}`"
-                :document="scene.step.stroke_json"
-                :autoplay="i === visibleCount - 1"
-                chrome="overlay"
-              />
-              <div
-                class="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 p-2.5 opacity-55"
-              >
-                <div
-                  class="flex items-center gap-0.5"
-                  role="img"
-                  :aria-label="`Through step ${scene.step.step_number}`"
-                >
-                  <span
-                    v-for="node in pathThrough(scene.step.step_number)"
-                    :key="node.n"
-                    class="flex size-5 items-center justify-center rounded-full border border-[var(--ink)]"
-                    :class="node.n === scene.step.step_number
-                      ? 'bg-[var(--accent)] text-[var(--ink)]'
-                      : 'bg-[var(--ink)] text-white'"
-                    :title="node.type === 'draw' ? `Draw · ${node.n}` : `Guess · ${node.n}`"
-                  >
-                    <svg
-                      v-if="node.type === 'draw'"
-                      viewBox="0 0 24 24"
-                      class="h-2.5 w-2.5"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
-                      <path d="m9 15 5-5" />
-                    </svg>
-                    <svg
-                      v-else
-                      viewBox="0 0 24 24"
-                      class="h-2.5 w-2.5"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M7 8h10" />
-                      <path d="M7 12h6" />
-                      <path d="M21 15a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" />
-                    </svg>
-                  </span>
-                </div>
-                <p
-                  v-if="scene.step.author_nickname"
-                  class="rounded-sm bg-[var(--surface)]/70 px-1.5 py-0.5 text-xs font-semibold text-[var(--ink)]"
-                >
-                  {{ scene.step.author_nickname }}
-                </p>
-              </div>
-            </div>
-          </template>
-
-          <template v-else>
-            <div class="flex items-center justify-between gap-2 opacity-45">
-              <div
-                class="flex items-center gap-0.5"
-                role="img"
-                :aria-label="`Through step ${scene.step.step_number}`"
-              >
-                <span
-                  v-for="node in pathThrough(scene.step.step_number)"
-                  :key="node.n"
-                  class="flex size-5 items-center justify-center rounded-full border border-[var(--ink)]"
-                  :class="node.n === scene.step.step_number
-                    ? 'bg-[var(--accent)] text-[var(--ink)]'
-                    : 'bg-[var(--ink)] text-white'"
-                  :title="node.type === 'draw' ? `Draw · ${node.n}` : `Guess · ${node.n}`"
-                >
-                  <svg
-                    v-if="node.type === 'draw'"
-                    viewBox="0 0 24 24"
-                    class="h-2.5 w-2.5"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
-                    <path d="m9 15 5-5" />
-                  </svg>
-                  <svg
-                    v-else
-                    viewBox="0 0 24 24"
-                    class="h-2.5 w-2.5"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M7 8h10" />
-                    <path d="M7 12h6" />
-                    <path d="M21 15a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" />
-                  </svg>
-                </span>
-              </div>
-              <p
-                v-if="scene.step.author_nickname"
-                class="text-xs font-semibold text-[var(--ink)]"
-              >
-                {{ scene.step.author_nickname }}
-              </p>
-            </div>
-            <p
-              v-if="scene.step.guess_text"
-              class="mt-4 text-center text-2xl font-bold leading-snug text-[var(--ink)] sm:text-3xl"
-            >
-              “{{ scene.step.guess_text }}”
-            </p>
-          </template>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+            It started with
+          </p>
+          <p class="mt-4 text-center text-2xl font-bold leading-snug tracking-tight text-[var(--ink)] sm:text-3xl">
+            “{{ reveal.prompt_text }}”
+          </p>
+          <p class="mt-4 text-center text-sm font-semibold text-[var(--ink-muted)]">
+            by {{ reveal.creator_nickname }}
+          </p>
         </div>
-      </template>
 
-      <!-- Scroll target — approaching reveals the next beat -->
-      <div
-        ref="sentinelRef"
-        class="h-32 w-full"
-        aria-hidden="true"
-      />
+        <!-- Draw -->
+        <div
+          v-else-if="layer.scene.kind === 'step' && layer.scene.step.type === 'draw' && layer.scene.step.stroke_json"
+          class="story-frame panel-sketch relative overflow-hidden p-0"
+        >
+          <CanvasReplayPlayer
+            :key="layer.scene.id"
+            class="absolute inset-0 h-full w-full"
+            :document="layer.scene.step.stroke_json"
+            :progress="progressForLayer(layer)"
+            :autoplay="false"
+            chrome="overlay"
+          />
+          <p
+            v-if="layer.scene.step.author_nickname"
+            class="pointer-events-none absolute right-2.5 top-2.5 z-10 rounded-sm bg-[var(--surface)]/70 px-1.5 py-0.5 text-xs font-semibold text-[var(--ink)]"
+          >
+            {{ layer.scene.step.author_nickname }}
+          </p>
+        </div>
+
+        <!-- Guess -->
+        <div
+          v-else-if="layer.scene.kind === 'step'"
+          class="story-frame panel-sketch relative flex flex-col items-center justify-center overflow-hidden p-5 sm:p-6"
+        >
+          <p
+            v-if="layer.scene.step.author_nickname"
+            class="absolute right-2.5 top-2.5 text-xs font-semibold text-[var(--ink-muted)]"
+          >
+            {{ layer.scene.step.author_nickname }}
+          </p>
+          <p
+            v-if="layer.scene.step.guess_text"
+            class="px-4 text-center text-2xl font-bold leading-snug text-[var(--ink)] sm:text-3xl"
+          >
+            “{{ layer.scene.step.guess_text }}”
+          </p>
+        </div>
+      </div>
     </div>
 
-    <!-- Thumb-zone scroll cue -->
-    <button
-      type="button"
-      class="scroll-cue fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-20 flex h-12 w-12 items-center justify-center text-[var(--ink)]"
-      aria-label="Continue"
-      @click="revealNext"
+    <!-- Footer chrome -->
+    <div
+      class="flex shrink-0 items-center justify-between gap-3 pt-3"
+      data-story-chrome
+      style="padding-bottom: max(0.25rem, env(safe-area-inset-bottom))"
     >
-      <svg
-        viewBox="0 0 40 56"
-        class="h-11 w-8"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
+      <button
+        type="button"
+        class="btn-quiet flex size-10 items-center justify-center !p-0 disabled:opacity-35"
+        :disabled="!canGoBack || snapping"
+        aria-label="Back"
+        @click="goBack"
       >
-        <path d="M19.2 4.5c.4 6.2-.6 12.8.3 19.2.5 3.6-.2 7.4.4 11.1.3 2.1.1 4.2-.1 6.2" />
-        <path d="M8.5 32.8c3.8 2.6 7.4 5.8 10.6 9.4 1.2-3.4 3.1-6.6 5.4-9.5" />
-        <path
-          d="M19.5 42.8c1.1 2.8 1.8 5.6 2.1 8.4"
-          stroke-width="1.7"
-          opacity="0.55"
-        />
-      </svg>
-    </button>
+        <svg
+          viewBox="0 0 24 24"
+          class="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.25"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m15 6-6 6 6 6" />
+        </svg>
+      </button>
+      <p class="text-center text-[11px] font-bold uppercase tracking-wider text-[var(--ink-muted)]">
+        Swipe to reveal
+      </p>
+      <button
+        type="button"
+        class="btn-accent flex size-10 items-center justify-center !p-0"
+        :disabled="snapping"
+        aria-label="Next"
+        @click="goNext"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          class="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.25"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m9 6 6 6-6 6" />
+        </svg>
+      </button>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.reveal-card {
-  scroll-margin-top: 1.5rem;
-  scroll-margin-bottom: 7rem;
+.story-slide {
+  will-change: transform;
 }
 
-/* Closing beat: last guess near top, DoodleLoop mid, prompt in the same view */
-.brand-beat {
-  min-height: 30dvh;
+.story-slide--snap {
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.story-frame {
+  aspect-ratio: 1;
+  height: 100%;
+  max-height: 100%;
+  width: auto;
+  max-width: 100%;
 }
 
 .brand-write {
@@ -501,7 +784,6 @@ onBeforeUnmount(() => {
   box-shadow: none;
 }
 
-/* Same chrome as landing hero CTA — pops on after the write */
 .brand-write--cta {
   animation: brand-cta-pop 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
@@ -513,27 +795,6 @@ onBeforeUnmount(() => {
   transform: translateY(0.12em);
   animation: brand-write-ch 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   animation-delay: calc(var(--i) * 0.055s);
-}
-
-.callback-beat {
-  min-height: 0;
-  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-}
-
-.callback-panel {
-  opacity: 0;
-  transform: translateY(2.75rem);
-  animation: callback-rise 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-.scroll-cue {
-  opacity: 0.55;
-  animation: cue-bob 1.4s ease-in-out infinite;
-}
-
-.scroll-cue:hover,
-.scroll-cue:focus-visible {
-  opacity: 0.9;
 }
 
 @keyframes brand-write-ch {
@@ -559,38 +820,17 @@ onBeforeUnmount(() => {
   }
 }
 
-@keyframes callback-rise {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes cue-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(0.35rem);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .brand-write--cta {
-    animation: none;
+  .story-slide--snap {
+    transition: none;
   }
 
-  .brand-write__ch,
-  .callback-panel {
+  .brand-write--cta,
+  .brand-write__ch {
     animation: none;
     opacity: 1;
     clip-path: none;
     transform: none;
-  }
-
-  .scroll-cue {
-    animation: none;
   }
 }
 </style>

@@ -52,7 +52,7 @@ export const LAB_TOUR_SLIDES: LabTourSlide[] = [
   {
     id: 'pass-draw',
     title: 'Pass · after first draw',
-    blurb: 'Share handoff with drawing preview',
+    blurb: 'Share handoff — turn locked in (peek optional)',
     path: '/c/lab/pass',
     query: passQuery(1, 'draw'),
   },
@@ -66,7 +66,7 @@ export const LAB_TOUR_SLIDES: LabTourSlide[] = [
   {
     id: 'pass-guess',
     title: 'Pass · after first guess',
-    blurb: 'Share handoff with guess teaser',
+    blurb: 'Share handoff — turn locked in (peek optional)',
     path: '/c/lab/pass',
     query: passQuery(2, 'guess'),
   },
@@ -94,7 +94,7 @@ export const LAB_TOUR_SLIDES: LabTourSlide[] = [
   {
     id: 'reveal',
     title: 'Reveal · final',
-    blurb: 'Full storybook gallery with mock chain',
+    blurb: 'Story cards — drawings sketch in as the card arrives',
     path: '/lab/screens/reveal',
   },
 ]

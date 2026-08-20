@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DrawingDocument } from '~/types/stroke'
 import { createEmptyDocument } from '~/utils/canvas/strokes'
+import { DEFAULT_MAX_STEPS } from '~/types/chain'
 import { stashPassHandoff } from '~/utils/passHandoff'
 
 useHead({ title: 'Start a loop — DoodleLoop' })
@@ -91,28 +92,34 @@ async function startChain() {
 <template>
   <main class="bg-dot-grid relative mx-auto flex h-dvh max-w-lg flex-col text-[var(--ink)]">
     <!-- Floating chrome — only real controls capture clicks -->
-    <div class="pointer-events-none absolute inset-x-0 top-0 z-20 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-      <div class="pointer-events-auto mx-auto flex justify-center">
-        <ChainPromptBuilder v-model="prompt" />
+    <div class="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <ChainLoopPath
+        mode="play"
+        :max-steps="DEFAULT_MAX_STEPS"
+        :current-step="1"
+        class="pointer-events-auto mx-auto w-full shrink-0"
+      />
+      <div class="pointer-events-auto flex w-full items-center gap-2">
+        <ChainPromptBuilder
+          v-model="prompt"
+          class="min-w-0 flex-1 [&>div]:max-w-none"
+        />
+        <button
+          type="button"
+          class="btn-accent shrink-0 !px-4 !py-2.5 text-sm"
+          :disabled="busy"
+          @click="openSubmit"
+        >
+          Done
+        </button>
       </div>
     </div>
 
     <div class="min-h-0 flex-1">
-      <CanvasDrawingCanvas v-model="drawing">
-        <template #action>
-          <button
-            type="button"
-            class="btn-accent !px-4 !py-2 text-sm"
-            :disabled="busy"
-            @click="openSubmit"
-          >
-            Done
-          </button>
-        </template>
-      </CanvasDrawingCanvas>
+      <CanvasDrawingCanvas v-model="drawing" />
     </div>
 
-    <div class="pointer-events-none absolute inset-x-3 top-[4.25rem] z-30 flex justify-center">
+    <div class="pointer-events-none absolute inset-x-3 top-[7.25rem] z-30 flex justify-center">
       <UiSketchToast
         :message="error"
         @dismiss="error = ''"

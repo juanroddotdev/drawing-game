@@ -37,19 +37,6 @@ const stepLabel = computed(() => (
   nextStep.value ? `step ${nextStep.value}` : 'the next step'
 ))
 
-const loopSteps = computed(() =>
-  Array.from({ length: maxSteps.value }, (_, i) => {
-    const n = i + 1
-    return {
-      n,
-      type: stepTypeForNumber(n),
-      done: n <= completedStep.value,
-      latest: n === completedStep.value,
-      next: n === completedStep.value + 1,
-    }
-  }),
-)
-
 const { enabled: showDevTools } = useDevTools()
 /** Play-next / inspector — local Nuxt only, never production/Vercel builds. */
 const showAdvanced = computed(() => import.meta.dev && showDevTools.value && !isMock.value)
@@ -104,113 +91,15 @@ useHead({ title: 'Who’s next? — DoodleLoop' })
       class="mx-auto flex w-full max-w-lg flex-1 flex-col px-4"
       style="padding-top: max(1.25rem, env(safe-area-inset-top)); padding-bottom: max(1.25rem, env(safe-area-inset-bottom))"
     >
-      <!-- Top: loop path — lines through done steps, arrow into the next -->
-      <div
+      <!-- Top: loop path -->
+      <ChainLoopPath
         v-if="completedStep > 0"
-        class="flex w-full max-w-sm shrink-0 items-start self-center px-1"
-        role="img"
-        :aria-label="`Step ${completedStep} of ${maxSteps} complete. Next is step ${completedStep + 1}.`"
-      >
-        <template
-          v-for="(step, idx) in loopSteps"
-          :key="step.n"
-        >
-          <div class="flex w-10 shrink-0 flex-col items-center gap-1">
-            <span
-              class="flex size-9 items-center justify-center rounded-full border border-[var(--ink)]"
-              :class="step.done
-                ? (step.latest
-                  ? 'bg-[var(--accent)] text-[var(--ink)] shadow-block'
-                  : 'bg-[var(--ink)] text-white')
-                : step.next
-                  ? 'bg-[var(--surface)] text-[var(--ink)] shadow-block'
-                  : 'bg-[var(--surface)] text-[var(--ink-muted)]'"
-              :title="step.type === 'draw' ? `Draw · step ${step.n}` : `Guess · step ${step.n}`"
-            >
-              <svg
-                v-if="step.type === 'draw'"
-                viewBox="0 0 24 24"
-                class="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.25"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
-                <path d="m9 15 5-5" />
-              </svg>
-              <svg
-                v-else
-                viewBox="0 0 24 24"
-                class="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.25"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M7 8h10" />
-                <path d="M7 12h6" />
-                <path d="M21 15a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" />
-              </svg>
-            </span>
-            <span
-              v-if="step.latest && you"
-              class="max-w-[2.75rem] truncate text-center text-[10px] font-bold leading-tight text-[var(--ink)]"
-            >
-              {{ you }}
-            </span>
-          </div>
-
-          <!-- Connector after this step (except last) -->
-          <div
-            v-if="idx < loopSteps.length - 1"
-            class="flex h-9 min-w-[0.5rem] flex-1 items-center"
-            aria-hidden="true"
-          >
-            <!-- Drawn path between finished steps -->
-            <svg
-              v-if="step.n < completedStep"
-              class="h-3 w-full text-[var(--ink)]"
-              viewBox="0 0 40 12"
-              preserveAspectRatio="none"
-              fill="none"
-            >
-              <path
-                d="M1 7 C10 2, 18 11, 28 5 S36 8, 39 6"
-                stroke="currentColor"
-                stroke-width="2.25"
-                stroke-linecap="round"
-              />
-            </svg>
-            <!-- Arrow into the next open step -->
-            <svg
-              v-else-if="step.n === completedStep"
-              class="h-4 w-full text-[var(--ink)]"
-              viewBox="0 0 40 16"
-              preserveAspectRatio="xMidYMid meet"
-              fill="none"
-            >
-              <path
-                d="M2 8 C12 3, 20 13, 28 8 L28 8"
-                stroke="currentColor"
-                stroke-width="2.25"
-                stroke-linecap="round"
-              />
-              <path
-                d="M24 4 L32 8 L24 12"
-                stroke="currentColor"
-                stroke-width="2.25"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </div>
-        </template>
-      </div>
+        mode="pass"
+        :max-steps="maxSteps"
+        :completed-step="completedStep"
+        :you="you"
+        class="shrink-0 self-center"
+      />
 
       <!-- Middle: title, locked status, share hero -->
       <div class="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 py-6">

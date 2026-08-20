@@ -26,7 +26,7 @@ if (!showDevTools.value) {
         <p class="text-sm leading-relaxed text-slate-400">
           Start a loop, then on the Pass screen tap
           <span class="font-semibold text-amber-200">Play next myself</span>
-          to claim the next seat. Same button appears on chain status when Dev tools are on.
+          to claim the next seat from the Pass screen’s advanced panel.
         </p>
       </header>
 

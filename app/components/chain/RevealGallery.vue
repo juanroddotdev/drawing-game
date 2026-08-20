@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { RevealPayload, RevealStep, StepType } from '~/types/chain'
-import { stepTypeForNumber } from '~/types/chain'
+import type { RevealPayload, RevealStep } from '~/types/chain'
 import { snapEase, travelToDrawT } from '~/utils/revealDrawGesture'
 
 const props = defineProps<{
@@ -71,25 +70,9 @@ const pathProgress = computed(() => {
   return max
 })
 
-const pathNodes = computed(() => {
-  const max = props.reveal.steps.length
-  const progress = pathProgress.value
-  const complete = scene.value?.kind === 'brand' || scene.value?.kind === 'callback'
-  return Array.from({ length: max }, (_, i) => {
-    const n = i + 1
-    const done = complete || n < progress
-    const latest = !complete && n === progress && scene.value?.kind === 'step'
-    const next = !complete && (
-      (progress === 0 && n === 1) || (progress > 0 && n === progress + 1)
-    )
-    return {
-      n,
-      type: stepTypeForNumber(n) as StepType,
-      done,
-      latest,
-      next,
-    }
-  })
+const pathComplete = computed(() => {
+  const s = scene.value
+  return s?.kind === 'brand' || s?.kind === 'callback'
 })
 
 let brandTimer: ReturnType<typeof setTimeout> | null = null
@@ -476,109 +459,15 @@ onBeforeUnmount(() => {
 
     <!-- Progress — all slots visible; fill in as the story advances -->
     <div
-      class="flex min-h-11 w-full shrink-0 items-center justify-center px-1 pb-3 pt-1"
+      class="flex w-full shrink-0 justify-center px-1 pb-3 pt-1"
       data-story-chrome
-      role="img"
-      :aria-label="pathProgress === 0
-        ? `Reveal starting. ${reveal.steps.length} steps.`
-        : `Through step ${pathProgress} of ${reveal.steps.length}`"
     >
-      <div class="flex w-full max-w-sm items-center px-1">
-        <div
-          v-for="(node, idx) in pathNodes"
-          :key="node.n"
-          class="flex min-w-0 items-center"
-          :class="idx < pathNodes.length - 1 ? 'flex-1' : 'shrink-0'"
-        >
-          <span
-            class="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--ink)] transition-colors duration-300"
-            :class="node.done
-              ? 'bg-[var(--ink)] text-white'
-              : node.latest
-                ? 'bg-[var(--accent)] text-[var(--ink)] shadow-block'
-                : node.next
-                  ? 'bg-[var(--surface)] text-[var(--ink)] shadow-block'
-                  : 'bg-[var(--surface)] text-[var(--ink-muted)]'"
-            :title="node.type === 'draw' ? `Draw · step ${node.n}` : `Guess · step ${node.n}`"
-          >
-            <svg
-              v-if="node.type === 'draw'"
-              viewBox="0 0 24 24"
-              class="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.25"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 19 5 12l7-9 2 5 5 2-7 9Z" />
-              <path d="m9 15 5-5" />
-            </svg>
-            <svg
-              v-else
-              viewBox="0 0 24 24"
-              class="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.25"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M7 8h10" />
-              <path d="M7 12h6" />
-              <path d="M21 15a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z" />
-            </svg>
-          </span>
-
-          <div
-            v-if="idx < pathNodes.length - 1"
-            class="flex h-9 min-w-[0.5rem] flex-1 items-center px-0.5"
-            aria-hidden="true"
-          >
-            <svg
-              v-if="node.done"
-              class="h-3 w-full text-[var(--ink)]"
-              viewBox="0 0 40 12"
-              preserveAspectRatio="none"
-              fill="none"
-            >
-              <path
-                d="M1 7 C10 2, 18 11, 28 5 S36 8, 39 6"
-                stroke="currentColor"
-                stroke-width="2.25"
-                stroke-linecap="round"
-              />
-            </svg>
-            <svg
-              v-else-if="node.latest"
-              class="h-4 w-full text-[var(--ink)]"
-              viewBox="0 0 40 16"
-              preserveAspectRatio="xMidYMid meet"
-              fill="none"
-            >
-              <path
-                d="M2 8 C12 3, 20 13, 28 8 L28 8"
-                stroke="currentColor"
-                stroke-width="2.25"
-                stroke-linecap="round"
-              />
-              <path
-                d="M24 4 L32 8 L24 12"
-                stroke="currentColor"
-                stroke-width="2.25"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            <div
-              v-else
-              class="mx-1 h-px w-full bg-[var(--ink)]/20"
-            />
-          </div>
-        </div>
-      </div>
+      <ChainLoopPath
+        mode="reveal"
+        :max-steps="reveal.steps.length"
+        :path-progress="pathProgress"
+        :complete="pathComplete"
+      />
     </div>
 
     <!-- Stage: swipe + tap -->

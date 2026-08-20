@@ -224,40 +224,36 @@ onMounted(load)
     v-if="payload && payload.step_type === 'draw' && !expired && !loadError"
     class="bg-dot-grid relative mx-auto flex h-dvh max-w-lg flex-col text-[var(--ink)]"
   >
-    <div class="pointer-events-none absolute inset-x-0 top-0 z-20 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-      <div class="mx-auto flex justify-center px-4">
-        <div class="pointer-events-auto">
-          <ChainPromptBuilder
-            :model-value="payload.prior_guess_text || 'Draw this'"
-            :editable="false"
-          />
-        </div>
+    <div class="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <ChainLoopPath
+        v-if="payload.step_number"
+        mode="play"
+        :max-steps="payload.max_steps"
+        :current-step="payload.step_number"
+        class="pointer-events-auto mx-auto w-full shrink-0"
+      />
+      <div class="pointer-events-auto flex w-full items-center gap-2">
+        <ChainPromptBuilder
+          :model-value="payload.prior_guess_text || 'Draw this'"
+          :editable="false"
+          class="min-w-0 flex-1 [&>div]:max-w-none"
+        />
+        <button
+          type="button"
+          class="btn-accent shrink-0 !px-4 !py-2.5 text-sm"
+          :disabled="busy"
+          @click="openSubmit"
+        >
+          Done
+        </button>
       </div>
     </div>
 
-    <p
-      v-if="payload"
-      class="pointer-events-none absolute inset-x-0 top-[3.25rem] z-10 text-center text-[11px] font-bold text-[var(--ink-muted)]"
-    >
-      Step {{ payload.step_number }} of {{ payload.max_steps }}
-    </p>
-
     <div class="min-h-0 flex-1">
-      <CanvasDrawingCanvas v-model="drawing">
-        <template #action>
-          <button
-            type="button"
-            class="btn-accent !px-4 !py-2 text-sm"
-            :disabled="busy"
-            @click="openSubmit"
-          >
-            Done
-          </button>
-        </template>
-      </CanvasDrawingCanvas>
+      <CanvasDrawingCanvas v-model="drawing" />
     </div>
 
-    <div class="pointer-events-none absolute inset-x-3 top-[4.5rem] z-30 flex justify-center">
+    <div class="pointer-events-none absolute inset-x-3 top-[7.25rem] z-30 flex justify-center">
       <UiSketchToast
         :message="submitError"
         @dismiss="submitError = ''"
@@ -285,15 +281,13 @@ onMounted(load)
       class="mx-auto flex w-full max-w-lg flex-1 flex-col px-4"
       style="padding-top: max(1rem, env(safe-area-inset-top))"
     >
-      <header
+      <ChainLoopPath
         v-if="payload"
-        class="mb-4"
-      >
-        <p class="text-center text-[11px] font-bold text-[var(--ink-muted)]">
-          Step {{ payload.step_number }} of {{ payload.max_steps }}
-          · Guess
-        </p>
-      </header>
+        mode="play"
+        :max-steps="payload.max_steps"
+        :current-step="payload.step_number || 1"
+        class="mb-4 shrink-0"
+      />
 
       <div
         v-if="expired"

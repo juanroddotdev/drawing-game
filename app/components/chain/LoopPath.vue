@@ -20,9 +20,12 @@ const props = withDefaults(defineProps<{
   complete?: boolean
   /** Pass — nickname under the step just finished. */
   you?: string
+  /** Same look as default; dims steps that are not current on this card. */
+  tone?: 'default' | 'subtle'
 }>(), {
   maxSteps: DEFAULT_MAX_STEPS,
   complete: false,
+  tone: 'default',
 })
 
 const nodes = computed(() => buildLoopPathNodes({
@@ -49,6 +52,23 @@ function nodeClass(node: { done: boolean, latest: boolean, next: boolean }) {
   if (node.next) return 'bg-[var(--surface)] text-[var(--ink)] shadow-block'
   return 'bg-[var(--surface)] text-[var(--ink-muted)]'
 }
+
+function nodeOpacity(node: { done: boolean, latest: boolean, next: boolean }) {
+  if (props.tone !== 'subtle') return ''
+  if (props.complete) return 'opacity-100'
+  if (node.latest || node.next) return 'opacity-100'
+  return 'opacity-40'
+}
+
+function connectorOpacity(
+  node: { latest: boolean, next: boolean },
+  nextNode: { latest: boolean, next: boolean } | undefined,
+) {
+  if (props.tone !== 'subtle') return ''
+  if (props.complete) return 'opacity-100'
+  if (node.latest || node.next || nextNode?.latest || nextNode?.next) return 'opacity-100'
+  return 'opacity-40'
+}
 </script>
 
 <template>
@@ -68,8 +88,8 @@ function nodeClass(node: { done: boolean, latest: boolean, next: boolean }) {
           :class="mode === 'pass' ? 'w-10' : ''"
         >
           <span
-            class="flex size-9 items-center justify-center rounded-full border border-[var(--ink)] transition-colors duration-300"
-            :class="nodeClass(node)"
+            class="flex size-9 items-center justify-center rounded-full border border-[var(--ink)] transition-[colors,opacity] duration-300"
+            :class="[nodeClass(node), nodeOpacity(node)]"
             :title="node.type === 'draw' ? `Draw · step ${node.n}` : `Guess · step ${node.n}`"
           >
             <svg
@@ -112,8 +132,11 @@ function nodeClass(node: { done: boolean, latest: boolean, next: boolean }) {
 
         <div
           v-if="idx < nodes.length - 1"
-          class="flex h-9 min-w-[0.5rem] flex-1 items-center"
-          :class="mode === 'reveal' ? 'px-0.5' : ''"
+          class="flex h-9 min-w-[0.5rem] flex-1 items-center transition-opacity duration-300"
+          :class="[
+            mode === 'reveal' ? 'px-0.5' : '',
+            connectorOpacity(node, nodes[idx + 1]),
+          ]"
           aria-hidden="true"
         >
           <svg

@@ -94,7 +94,7 @@ export const LAB_TOUR_SLIDES: LabTourSlide[] = [
   {
     id: 'reveal',
     title: 'Reveal · final',
-    blurb: 'Story cards — drawings sketch in as the card arrives',
+    blurb: 'Full-screen story cards — LoopPath, metadata, and nav inside the frame',
     path: '/lab/screens/reveal',
   },
 ]

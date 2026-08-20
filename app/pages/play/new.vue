@@ -92,30 +92,8 @@ async function startChain() {
   <main class="bg-dot-grid relative mx-auto flex h-dvh max-w-lg flex-col text-[var(--ink)]">
     <!-- Floating chrome — only real controls capture clicks -->
     <div class="pointer-events-none absolute inset-x-0 top-0 z-20 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-      <NuxtLink
-        to="/"
-        class="chip-sketch pointer-events-auto absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] flex h-10 w-10 items-center justify-center rounded-xl text-[var(--ink)]"
-        aria-label="Home"
-        title="Home"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          class="h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.25"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="m3 10 9-7 9 7" />
-          <path d="M5 10v9a1 1 0 0 0 1 1h4v-5h4v5h4a1 1 0 0 0 1-1v-9" />
-        </svg>
-      </NuxtLink>
-      <div class="mx-auto flex justify-center px-12">
-        <div class="pointer-events-auto">
-          <ChainPromptBuilder v-model="prompt" />
-        </div>
+      <div class="pointer-events-auto mx-auto flex justify-center">
+        <ChainPromptBuilder v-model="prompt" />
       </div>
     </div>
 

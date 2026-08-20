@@ -10,6 +10,7 @@ import { isExpiredTokenError, sharePath, stepTypeForNumber } from '~/types/chain
 import { displayShareUrl } from '~/utils/passHandoff'
 import { formatPassSubheader, pickPassSubheader } from '~/utils/passCopy'
 import { snapEase, travelToDrawT } from '~/utils/revealDrawGesture'
+import { buildLoopPathNodes, connectorAfter } from '~/utils/loopPathNodes'
 
 describe('strokes', () => {
   it('round-trips JSON', () => {
@@ -143,5 +144,29 @@ describe('reveal draw gesture', () => {
     expect(snapEase(0)).toBeCloseTo(0)
     expect(snapEase(1)).toBeCloseTo(1)
     expect(snapEase(0.5)).toBeGreaterThan(0.5)
+  })
+})
+
+describe('loop path nodes', () => {
+  it('highlights the current step in play mode', () => {
+    const nodes = buildLoopPathNodes({ maxSteps: 6, mode: 'play', currentStep: 3 })
+    expect(nodes[2]!.latest).toBe(true)
+    expect(nodes[1]!.done).toBe(true)
+    expect(nodes[3]!.done).toBe(false)
+    expect(connectorAfter(nodes[1]!, 'play', 1, nodes)).toBe('solid')
+    expect(connectorAfter(nodes[2]!, 'play', 2, nodes)).toBe('hairline')
+  })
+
+  it('draws an arrow into the next seat on pass', () => {
+    const nodes = buildLoopPathNodes({ maxSteps: 6, mode: 'pass', completedStep: 2 })
+    expect(nodes[1]!.latest).toBe(true)
+    expect(nodes[2]!.next).toBe(true)
+    expect(connectorAfter(nodes[1]!, 'pass', 1, nodes)).toBe('arrow')
+  })
+
+  it('reveals future steps with hairlines before the story starts', () => {
+    const nodes = buildLoopPathNodes({ maxSteps: 6, mode: 'reveal', pathProgress: 0 })
+    expect(nodes[0]!.next).toBe(true)
+    expect(connectorAfter(nodes[0]!, 'reveal', 0, nodes)).toBe('hairline')
   })
 })

@@ -9,7 +9,7 @@ const { enabled: showDevTools } = useDevTools()
 const slug = computed(() => String(route.params.chainId || ''))
 
 if (!showDevTools.value) {
-  await navigateTo(`/c/${slug.value}`)
+  await navigateTo('/')
 }
 
 const data = ref<ChainInspectorPayload | null>(null)
@@ -68,12 +68,6 @@ onMounted(load)
           Full chain dump for solo testing. Not a player-facing screen.
         </p>
         <div class="flex flex-wrap gap-2 pt-1">
-          <NuxtLink
-            :to="`/c/${slug}`"
-            class="rounded-lg border border-slate-700 px-3 py-1.5 text-sm"
-          >
-            Status
-          </NuxtLink>
           <NuxtLink
             :to="`/c/${slug}/reveal`"
             class="rounded-lg border border-slate-700 px-3 py-1.5 text-sm"

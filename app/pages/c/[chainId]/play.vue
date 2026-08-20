@@ -272,7 +272,86 @@ onMounted(load)
     />
   </main>
 
-  <!-- Guess / loading / errors -->
+  <!-- Guess: stacked doodle + action -->
+  <main
+    v-else-if="payload && payload.step_type === 'guess' && !expired && !loadError"
+    class="bg-dot-grid flex min-h-dvh flex-col text-[var(--ink)]"
+  >
+    <div
+      class="mx-auto flex w-full max-w-lg flex-col gap-3 px-4"
+      style="padding-top: max(0.75rem, env(safe-area-inset-top)); padding-bottom: max(1rem, env(safe-area-inset-bottom))"
+    >
+      <ChainLoopPath
+        mode="play"
+        :max-steps="payload.max_steps"
+        :current-step="payload.step_number || 1"
+        class="shrink-0"
+      />
+
+      <header class="shrink-0 space-y-1 text-center">
+        <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">
+          Guess the doodle
+        </h1>
+        <p class="text-sm font-semibold text-[var(--ink-muted)]">
+          What did they draw?
+        </p>
+      </header>
+
+      <div class="mx-auto flex w-full max-w-sm flex-col gap-2">
+        <div
+          v-if="payload.prior_stroke_json"
+          class="panel-sketch mx-auto aspect-square w-full max-w-[16rem] overflow-hidden p-0 sm:max-w-[18rem]"
+        >
+          <CanvasStrokeRenderer
+            :document="payload.prior_stroke_json"
+            bare
+            class="h-full w-full"
+          />
+        </div>
+
+        <form
+          class="flex flex-col gap-2"
+          @submit.prevent="openSubmit"
+        >
+          <label class="sr-only" for="guess-input">Your guess</label>
+          <input
+            id="guess-input"
+            v-model="guess"
+            type="text"
+            maxlength="120"
+            class="chip-sketch w-full rounded-[var(--radius-chip)] border-2 border-[var(--ink)] bg-[var(--surface)] px-3 py-3.5 text-base font-semibold outline-none ring-[var(--accent)] focus:ring-2"
+            placeholder="Type your guess here…"
+            autocomplete="off"
+            enterkeyhint="done"
+          >
+          <button
+            type="submit"
+            class="btn-accent w-full !py-3.5 text-base disabled:opacity-50"
+            :disabled="busy"
+          >
+            Submit guess
+          </button>
+        </form>
+
+        <UiSketchToast
+          :message="submitError"
+          @dismiss="submitError = ''"
+        />
+      </div>
+    </div>
+
+    <UiPlayerSubmitSheet
+      v-model:open="sheetOpen"
+      v-model:nickname="nickname"
+      v-model:email="email"
+      title="Submit your guess"
+      confirm-label="Submit guess"
+      :busy="busy"
+      @confirm="submit"
+    />
+  </main>
+
+  <!-- Loading / errors -->
   <main
     v-else
     class="bg-dot-grid flex min-h-dvh flex-col text-[var(--ink)]"
@@ -329,34 +408,6 @@ onMounted(load)
         {{ loadError }}
       </p>
 
-      <template v-else-if="payload && payload.step_type === 'guess'">
-        <div class="flex min-h-0 flex-1 flex-col gap-4 pb-28">
-          <h1 class="text-2xl font-bold tracking-tight">
-            What is this?
-          </h1>
-          <CanvasStrokeRenderer
-            v-if="payload.prior_stroke_json"
-            :document="payload.prior_stroke_json"
-          />
-          <label class="block space-y-2">
-            <span class="text-sm font-bold text-[var(--ink)]">Your guess</span>
-            <input
-              v-model="guess"
-              type="text"
-              maxlength="120"
-              class="chip-sketch w-full rounded-[var(--radius-chip)] bg-[var(--surface)] px-3 py-3 text-base font-medium outline-none"
-              placeholder="Type your guess"
-              autocomplete="off"
-            >
-          </label>
-          <UiSketchToast
-            :message="submitError"
-            class="mt-1"
-            @dismiss="submitError = ''"
-          />
-        </div>
-      </template>
-
       <p
         v-else-if="!expired"
         class="text-sm font-medium text-[var(--ink-muted)]"
@@ -364,32 +415,5 @@ onMounted(load)
         Loading…
       </p>
     </div>
-
-    <div
-      v-if="payload && payload.step_type === 'guess' && !expired && !loadError"
-      class="fixed inset-x-0 bottom-0 z-20 bg-[var(--paper)]/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-[var(--paper)]/85"
-      style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom))"
-    >
-      <div class="mx-auto max-w-lg">
-        <button
-          type="button"
-          class="btn-accent w-full !py-4 text-base disabled:opacity-50"
-          :disabled="busy"
-          @click="openSubmit"
-        >
-          Submit guess
-        </button>
-      </div>
-    </div>
-
-    <UiPlayerSubmitSheet
-      v-model:open="sheetOpen"
-      v-model:nickname="nickname"
-      v-model:email="email"
-      title="Submit your guess"
-      confirm-label="Submit guess"
-      :busy="busy"
-      @confirm="submit"
-    />
   </main>
 </template>
